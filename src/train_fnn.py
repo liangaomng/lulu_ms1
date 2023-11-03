@@ -17,7 +17,6 @@ torch.set_default_dtype(torch.float32)
 
 # CUDA_VISIBLE_DEVICES=4,5 python -m torch.distributed.launch --nproc_per_node=2 deeponet_FNN_siren_GD_ddp.py
 
-                 
 def target_func(x, mu ):
 
     out = np.sum(np.exp(-x**2)*np.sin(mu*x**2),axis=-1,keepdims=True)

@@ -5,12 +5,12 @@ import argparse
 import yaml
 
 parser = argparse.ArgumentParser(description="config")
-    
+
 parser.add_argument('--case_num', type = int, default = 0) #选不同的配置参数训练
 
 args = parser.parse_args()
 
-path = './config/config_{}.yaml'.format(args.case_num)
+path = './config/config.yaml'
 
 with open(path, 'r') as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
