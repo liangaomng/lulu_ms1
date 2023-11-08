@@ -55,26 +55,26 @@ for activation in ["phi" ]:
         plt.close(fig)
 
 
-        mse_fnn = np.load('result/fnn-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
+        # mse_fnn = np.load('result/fnn-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
 
         mse_ms2 = np.load('result/mscalenn2-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
     
-        mse_ms2_alpha = np.load('result/mscalenn2-multi-alphai-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
-        
-        mse_ms2_alpha_c = np.load('result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
+        # mse_ms2_alpha = np.load('result/mscalenn2-multi-alphai-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
+        #
+        # mse_ms2_alpha_c = np.load('result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
 
         # mse_ms2_alpha_rescale = np.load('./mscalenn2-multi-alphai-mu={}-{}-{}-rescaleout/mse.npy'.format(mu,activation,kernel_initializer))
         
         # mse_ms2_alpha_c_rescale = np.load('./mscalenn2-multi-alphai-ci-mu={}-{}-{}-rescaleout/mse.npy'.format(mu,activation,kernel_initializer))
 
 
-        length = min(len(mse_fnn),len(mse_ms2),len(mse_ms2_alpha),len(mse_ms2_alpha_c))
-
+        #length = min(len(mse_fnn),len(mse_ms2),len(mse_ms2_alpha),len(mse_ms2_alpha_c))
+        length=4000
         fig ,ax = plt.subplots(figsize=(6, 4))
-        plt.semilogy(mse_fnn[0:length],label='fnn',color='#1f77b4')
+        #plt.semilogy(mse_fnn[0:length],label='fnn',color='#1f77b4')
         
         plt.semilogy(mse_ms2[0:length],label='ms2',color='#ff7f0e')
-        plt.semilogy(mse_ms2_alpha[0:length],label='ms2_' + r'$\alpha$',color='#2ca02c')
+        #plt.semilogy(mse_ms2_alpha[0:length],label='ms2_' + r'$\alpha$',color='#2ca02c')
         
         # plt.semilogy(mse_ms2_alpha_c[0:length],label='ms2_'+ r'$\alpha$'+'_c',color='r')
         # plt.semilogy(mse_ms2_alpha_rescale[0:length],label='ms2_' + r'$\alpha$' + '_rescale' )
@@ -91,13 +91,13 @@ for activation in ["phi" ]:
 
 
 
-        c = np.load('./result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/ci.npy'.format(mu,activation,kernel_initializer))
-        plt.plot(c)
-        plt.title('ci-{}-{}-rescaleout'.format(activation,kernel_initializer),fontsize=15)
-        plt.yticks( size=15)#设置大小及加粗 #weight='bold'
-        plt.xticks( size=15)
-        plt.savefig(save_path + '/ci-{}-{}-rescaleout.png'.format(activation,kernel_initializer))
-        plt.close()
+        # c = np.load('./result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/ci.npy'.format(mu,activation,kernel_initializer))
+        # plt.plot(c)
+        # plt.title('ci-{}-{}-rescaleout'.format(activation,kernel_initializer),fontsize=15)
+        # plt.yticks( size=15)#设置大小及加粗 #weight='bold'
+        # plt.xticks( size=15)
+        # plt.savefig(save_path + '/ci-{}-{}-rescaleout.png'.format(activation,kernel_initializer))
+        # plt.close()
 
 
 

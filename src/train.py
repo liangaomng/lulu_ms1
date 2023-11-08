@@ -25,14 +25,7 @@ def target_func(x, mu ):
     return out
 
 
-def mixcoe(o_n=500,MixKnum=3):
-    coe=np.ones([1,o_n])
-    Unit_each=int(np.floor(o_n/MixKnum))
-    for i_z in range(1,MixKnum-1):
-        coe[0,Unit_each*i_z:Unit_each*(i_z+1)]=i_z
-    coe[0,Unit_each*(MixKnum-1):]=MixKnum-1
-    coe = torch.tensor(coe,dtype=torch.float32)
-    return coe
+
 
 class MyDataset(torch.utils.data.Dataset):
 
@@ -113,8 +106,7 @@ def train(args,save_path):
             count_num = 0
 
             for _,(coordinate,label) in enumerate(train_loader):
-                print("coord",coordinate)
-                print("label",label)
+
 
                 predict = model(coordinate.to(device)) #直接会对第一维进行broadcast
                 
@@ -134,7 +126,7 @@ def train(args,save_path):
                 
             # scheduler.step()
             loss_list.append(loss_train/count_num)
-            # lr_list.append(scheduler.get_last_lr()[0])
+
             mse_list.append(mse_loss)
             print("traing epoch: {} , loss: {} , mse: {}".format(k,loss_train/count_num,mse_loss))
 
@@ -249,34 +241,26 @@ def train(args,save_path):
 
         np.save(save_path + '/lr.npy', lr_list)
 
-        if args.model=="mscalenn2-multi-alphai-ci":
-            np.save(save_path + '/ci.npy', model.c_s.detach().cpu().numpy())
 
-                
-
-            # test_predict = model(torch.from_numpy(test_coordinate).to(device)) #直接会对第一维进行broadcast      
-                
-                # mse_loss = np.mean((test_predict.detach().cpu().numpy()-test_label)**2)
-
-                # fig ,ax = plt.subplots()
-                # plt.plot(test_coordinate,test_predict.detach().cpu().numpy(),'*',label='predict') 
-                # plt.plot(test_coordinate, test_label,'-',label='label')           
-                # plt.xlabel('x',fontsize=16)
-                # plt.ylabel('y',fontsize=16)
-                # ax.get_xaxis().get_major_formatter().set_useOffset(False)
-                # plt.tick_params(labelsize=16,width=2,colors='black')
-                # plt.legend(fontsize=16)
-                # plt.title("MSE={}".format(mse_loss))    
-                # fig.savefig('{}/target_func_epoch{}.png'.format(save_path,k), bbox_inches='tight',format='png', dpi=600)     
-                # plt.close(fig)
 
 import ast
-# 定义一个安全的字符串转列表的函数
-def parse_list(arg_value):
-    try:
-        return ast.literal_eval(arg_value)
-    except:
-        raise argparse.ArgumentTypeError("The argument --sub_omegas must be a list")
+import re
+def redu_subnets4name(input:list)->str:#简化记录的name
+    '''
+    Args:
+        input_str: [1,..3]
+        reduce the name 4 "1_3_1" means :start 1 end3 step=1
+    Returns:"1_3_1"
+
+    '''
+    start, end = input[0], input[-1]
+
+    # 计算步长，如果序列长度大于1，则通过相邻元素的差值计算步长
+    step = input[1] - input[0] if len(input) > 1 else 1
+
+    # 生成并返回格式化的字符串
+    return f"{start}_{end}_{step}"
+
 
 if __name__ == '__main__':
 
@@ -287,8 +271,7 @@ if __name__ == '__main__':
     parser.add_argument('--num', type = int, default = 5000) 
     parser.add_argument('--mu', type = float, default = 70) 
     parser.add_argument('--x_min', type = float, default = -1) 
-    parser.add_argument('--x_max', type = float, default = 1) 
-    
+    parser.add_argument('--x_max', type = float, default = 1)
     
     parser.add_argument('--ifrandomsample', choices = ['True', 'False'], default = 'False')
     parser.add_argument('--batchsize', type = int, default = 5000)
@@ -297,52 +280,33 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type = float, default = 1.e-3) 
     parser.add_argument('--optim', choices = ['Adam'], default = 'Adam') 
 
-    parser.add_argument('--sub_omegas', type=parse_list,default = [1,2,4,8,16,32],help='list of sub_omegas')
+    parser.add_argument('--sub_omegas',default =  "[1,2,4,8,16,32]",help='list str of sub_omegas')
     parser.add_argument('--sub_layer_sizes', default = [1,150,150,150,1])
     
     parser.add_argument('--model', choices = ["mscalenn2" ,"mscalenn2-multi-alphai","mscalenn2-multi-alphai-ci","fnn"], default = 'mscalenn2')     
     parser.add_argument('--activation', choices = ["phi" ,"ricker","sRELU"], default = 'phi')     
     parser.add_argument('--kernel_initializer', choices = ["Glorot-normal" ,"Glorot-uniform","He-normal","He-uniform"], default = 'He-normal')     
 
+    # str to list
     args = parser.parse_args()
+    args.sub_omegas = ast.literal_eval(args.sub_omegas)#4list
+
+    print("redu_name",redu_subnets4name(args.sub_omegas))
 
     # loca=time.strftime('%Y-%m-%d %H:%M:%S')
-    save_path = './result/{}-mu={}-{}-{}'.format(args.model,args.mu,args.activation,args.kernel_initializer)
+    save_path = './result/{}-mu={}-{}-{}--{}'.format(args.model,
+                                                     args.mu,
+                                                     args.activation,
+                                                     args.kernel_initializer,
+                                                     redu_subnets4name(args.sub_omegas))
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
     filename = os.path.abspath(__file__)
     shutil.copy(filename,save_path) 
-    shutil.copy("./src/model_utils.py",save_path)     
+    shutil.copy("./src/model_utils.py",save_path)
 
-    path = '{}/config.yaml'.format(save_path)
-    
-    # try:
-    #     with open(path, 'r') as f:
-    #         config = yaml.load(f, Loader=yaml.FullLoader)
-    #         args.dim = config['sampling']['dim']
-    #         args.method = config['sampling']['method']
-    #         args.num = config['sampling']['num']
-    #         args.mu = config['sampling']['mu']
-    #         args.x_min = config['sampling']['x_min']
-    #         args.x_max = config['sampling']['x_max']
-
-    #         args.ifrandomsample = config['training']['ifrandomsample']
-    #         args.batchsize = config['training']['batchsize']
-    #         args.model = config['training']['model']
-    #         args.lr = config['training']['lr']
-    #         args.optim = config['training']['optim']
-    #         # args.schedu = config['training']['schedu']
-    #         # args.step_size = config['training']['step_size']
-    #         # args.gamma = config['training']['gamma']
-    #         args.n_epoch = config['training']['n_epoch']
-    #         args.sub_omegas = config['training']['sub_omegas']
-    #         args.sub_layer_sizes = config['training']['sub_layer_sizes']
-    #         args.activation = config['training']['activation']
-    #         args.kernel_initializer = config['training']['kernel_initializer']
-    #         # args.first_omega = config['training']['first_omega']
-    #         # args.hidden_omega = config['training']['hidden_omega']
-
+    path = '{}/config_{}.yaml'.format(save_path,args.case_num)
 
     # except FileNotFoundError:
     with open(path, 'a') as f:
@@ -369,6 +333,10 @@ if __name__ == '__main__':
             }
         }
         f.write(yaml.dump(config, allow_unicode = True))
+
+    #copy the config.yaml to the config folder
+    shutil.copy(path,'./config/')
+    print("moved config.yaml to the config folder")
 
     train(args,save_path)
     

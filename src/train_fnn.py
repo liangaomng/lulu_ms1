@@ -59,27 +59,7 @@ def train(args,save_path):
                         activation = args.activation,
                         kernel_initializer = args.kernel_initializer,
                         sub_omegas = sub_omegas,
-                        )  
-
-    if args.model=="mscalenn2-multi-alphai":
-
-        sub_omegas = args.sub_omegas
-        model = MscaleNN2_multi_alphai(
-                        sub_layer_sizes = args.sub_layer_sizes,
-                        activation = args.activation,
-                        kernel_initializer = args.kernel_initializer,
-                        sub_omegas = sub_omegas,
-                        )  
-
-    if args.model=="mscalenn2-multi-alphai-ci":
-
-        sub_omegas = args.sub_omegas
-        model = MscaleNN2_multi_alphai_ci(
-                        sub_layer_sizes = args.sub_layer_sizes,
-                        activation = args.activation,
-                        kernel_initializer = args.kernel_initializer,
-                        sub_omegas = sub_omegas,
-                        )  
+                        )
         
     # initialize your model 
     if args.model=="mscalenn":
@@ -204,15 +184,6 @@ def train(args,save_path):
 
                 
 
-    #             if k == 0:
-    #                 initial_loss = loss_list[-1]
-    #                 best_loss = initial_loss
-    #                 torch.save(model.state_dict(),  './{}/model_epoch{}.pth'.format(save_path, k))
-    #             else:
-    #                 new_loss = loss_list[-1]
-    #                 if new_loss < best_loss:
-    #                     best_loss = new_loss
-    #                     torch.save(model.state_dict(), './{}/model_epoch{}.pth'.format(save_path, k))
 
     if args.ifrandomsample == "True":
         print("ifrandomsample:",args.ifrandomsample)
@@ -345,7 +316,7 @@ if __name__ == '__main__':
     shutil.copy(filename,save_path) 
     shutil.copy("./src/model_utils.py",save_path)     
 
-    path = '{}/config.yaml'.format(save_path)
+    path = '{}/config_0.yaml'.format(save_path)
     
     # try:
     #     with open(path, 'r') as f:

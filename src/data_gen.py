@@ -6,11 +6,12 @@ import yaml
 
 parser = argparse.ArgumentParser(description="config")
 
-parser.add_argument('--case_num', type = int, default = 0) #选不同的配置参数训练
+parser.add_argument('--case_num', type = int, default = 1) #选不同的配置参数训练
 
 args = parser.parse_args()
 
-path = './config/config.yaml'
+#read config from path
+path = './config/config_{}.yaml'.format(args.case_num)
 
 with open(path, 'r') as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
@@ -46,7 +47,7 @@ if args.method == "linspace":
 
 
 outputs = target_func(coordinates,mu =args.mu)
-print(outputs.shape)
+print("target_output_shape",outputs.shape)
 
 
 def plot1d(fig_name,coordinates,outputs):
@@ -86,8 +87,6 @@ def plot2d(fig_name,coordinates,outputs):
     ax.axis('equal')
     plt.tick_params(labelsize=16,width=2,colors='black')
     plt.legend(fontsize=16)
-
-    
     
     fig.savefig('%s/target_func.png'%fig_name, bbox_inches='tight',format='png', dpi=600)
     
@@ -97,6 +96,7 @@ def plot2d(fig_name,coordinates,outputs):
 # train_data = np.concatenate((coordinates,outputs),axis=-1)
 
 save_path = "./data/case{}".format(args.case_num)
+print("before save")
 if not os.path.exists(save_path):
     os.makedirs(save_path)
 if args.dim==1:

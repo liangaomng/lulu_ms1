@@ -286,7 +286,7 @@ if __name__ == '__main__':
 
     save_path = './result/{}-mu={}-{}-{}'.format(args.model,args.mu,args.activation,args.kernel_initializer)
      
-    path = '{}/config.yaml'.format(save_path)
+    path = '{}/config_0.yaml'.format(save_path)
     
     with open(path, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
