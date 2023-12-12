@@ -17,4 +17,5 @@
 
 ```
 ## We use the excel set  to do expr
-  like python3 Expr1_run.py --expr_set_path "Expr1d/Expr_2.xlsx"
+```python
+  python3 Expr1_run.py --expr_set_path "Expr1d/Expr_2.xlsx"
