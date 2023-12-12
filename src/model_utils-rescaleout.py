@@ -21,6 +21,7 @@ def activation_dict_torch(identifier):
             "ricker": ricker,
             "sin": torch.sin,
             "cos": torch.cos,
+            "learn_psi": learn_psi,
         }[identifier]
 
 

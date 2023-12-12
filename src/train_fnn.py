@@ -308,7 +308,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # loca=time.strftime('%Y-%m-%d %H:%M:%S')
-    save_path = './result/{}-mu={}-{}-{}'.format(args.model,args.mu,args.activation,args.kernel_initializer)
+    save_path = './Result/{}-mu={}-{}-{}'.format(args.model,args.mu,args.activation,args.kernel_initializer)
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 

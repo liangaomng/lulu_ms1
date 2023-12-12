@@ -273,7 +273,7 @@ if __name__ == '__main__':
     parser.add_argument('--x_min', type = float, default = -1) 
     parser.add_argument('--x_max', type = float, default = 1)
     
-    parser.add_argument('--ifrandomsample', choices = ['True', 'False'], default = 'False')
+    parser.add_argument('--ifrandomsample', choices = ['True', 'False'], default = 'True')
     parser.add_argument('--batchsize', type = int, default = 5000)
     parser.add_argument('--case_num', type = int, default = 0)
     parser.add_argument('--n_epoch', type = int, default = 1) 
@@ -284,7 +284,7 @@ if __name__ == '__main__':
     parser.add_argument('--sub_layer_sizes', default = [1,150,150,150,1])
     
     parser.add_argument('--model', choices = ["mscalenn2" ,"mscalenn2-multi-alphai","mscalenn2-multi-alphai-ci","fnn"], default = 'mscalenn2')     
-    parser.add_argument('--activation', choices = ["phi" ,"ricker","sRELU"], default = 'phi')     
+    parser.add_argument('--activation', choices = ["phi" ,"ricker","sRELU","learn_psi"], default = 'phi')
     parser.add_argument('--kernel_initializer', choices = ["Glorot-normal" ,"Glorot-uniform","He-normal","He-uniform"], default = 'He-normal')     
 
     # str to list
@@ -293,8 +293,10 @@ if __name__ == '__main__':
 
     print("redu_name",redu_subnets4name(args.sub_omegas))
 
+    print("args",args.ifrandomsample)
+
     # loca=time.strftime('%Y-%m-%d %H:%M:%S')
-    save_path = './result/{}-mu={}-{}-{}--{}'.format(args.model,
+    save_path = './Result/{}-mu={}-{}-{}--{}'.format(args.model,
                                                      args.mu,
                                                      args.activation,
                                                      args.kernel_initializer,

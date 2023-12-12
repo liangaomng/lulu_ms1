@@ -13,6 +13,8 @@ def initializer_dict_torch(identifier):
         "zeros": torch.nn.init.zeros_,
     }[identifier]
 
+learn_psi= LearnPsi() #对象实例
+
 def activation_dict_torch(identifier):
     return {
             "relu": torch.nn.functional.relu,
@@ -21,6 +23,7 @@ def activation_dict_torch(identifier):
             "ricker": ricker,
             "sin": torch.sin,
             "cos": torch.cos,
+            "learn_psi": learn_psi,
         }[identifier]
 
 
@@ -112,9 +115,8 @@ class MscaleNN(nn.Module):
         if isinstance(activation, list):
             self.activation = list(map(activations_get, activation))
         else:
+
             self.activation = activation_dict_torch(activation)
-
-
 
         self.linears = torch.nn.ModuleList()
         self.linears.append(
@@ -164,21 +166,26 @@ class MscaleNN2(nn.Module):
     def __init__(self, sub_layer_sizes, activation, kernel_initializer, sub_omegas):
 
         super().__init__()
-
+        print("test")
+        print(activation)
         if isinstance(activation, list):
+
             self.activation = list(map(activations_get, activation))
         else:
-            self.activation = activation_dict_torch(activation)
 
+            self.activation = activation_dict_torch(activation)
 
         self.subnets=nn.ModuleList()
         #get the sub_omegas‘ itemmiju
         for index,_ in enumerate(sub_omegas):
-            fnn = FNN(layer_sizes =sub_layer_sizes,activation=activation,kernel_initializer=kernel_initializer)
+            fnn = FNN(layer_sizes =sub_layer_sizes,
+                      activation=activation,
+                      kernel_initializer=kernel_initializer)
             self.subnets.append(fnn)
 
         self.sub_omegas = sub_omegas
-
+        print("__net___", self.subnets)
+        exit()
 
     def forward(self, x):
 

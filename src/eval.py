@@ -284,7 +284,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    save_path = './result/{}-mu={}-{}-{}'.format(args.model,args.mu,args.activation,args.kernel_initializer)
+    save_path = './Result/{}-mu={}-{}-{}'.format(args.model,args.mu,args.activation,args.kernel_initializer)
      
     path = '{}/config_0.yaml'.format(save_path)
     

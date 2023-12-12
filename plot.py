@@ -12,7 +12,7 @@ print(mcolors.CSS4_COLORS['blue'])
         #   \'#8c564b\', \'#e377c2\', \'#7f7f7f\', \'#bcbd22\', \'#17becf\']
 # dirname = '/Users/科研资料/Helmholtz方程/多尺度神经网络的研究/updates on MscaleDNN/所有选中实验/ex1.fitting-ok'
 
-dirname = '/Users/liangaoming/Desktop/neural_study/lulu_ms/result'
+dirname = '/Users/liangaoming/Desktop/neural_study/lulu_ms/Result'
 
 save_path = dirname + '/compare_fig'
 if not os.path.exists(save_path):
@@ -24,13 +24,13 @@ for activation in ["phi" ]:
     for kernel_initializer in ["Glorot-normal" ]:
             
         # for model in ["mscalenn2" ,"mscalenn2-multi-alphai","mscalenn2-multi-alphai-ci"]:
-        loss_fnn = np.load('result/fnn-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
+        loss_fnn = np.load('Result/fnn-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
 
-        loss_ms2 = np.load('result/mscalenn2-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
+        loss_ms2 = np.load('Result/mscalenn2-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
     
-        loss_ms2_alpha = np.load('result/mscalenn2-multi-alphai-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
+        loss_ms2_alpha = np.load('Result/mscalenn2-multi-alphai-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
         
-        loss_ms2_alpha_c = np.load('result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
+        loss_ms2_alpha_c = np.load('Result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
 
 
         length = min(len(loss_fnn),len(loss_ms2),len(loss_ms2_alpha),len(loss_ms2_alpha_c))
@@ -55,13 +55,13 @@ for activation in ["phi" ]:
         plt.close(fig)
 
 
-        # mse_fnn = np.load('result/fnn-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
+        # mse_fnn = np.load('Result/fnn-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
 
-        mse_ms2 = np.load('result/mscalenn2-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
+        mse_ms2 = np.load('Result/mscalenn2-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
     
-        # mse_ms2_alpha = np.load('result/mscalenn2-multi-alphai-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
+        # mse_ms2_alpha = np.load('Result/mscalenn2-multi-alphai-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
         #
-        # mse_ms2_alpha_c = np.load('result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
+        # mse_ms2_alpha_c = np.load('Result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
 
         # mse_ms2_alpha_rescale = np.load('./mscalenn2-multi-alphai-mu={}-{}-{}-rescaleout/mse.npy'.format(mu,activation,kernel_initializer))
         
@@ -91,7 +91,7 @@ for activation in ["phi" ]:
 
 
 
-        # c = np.load('./result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/ci.npy'.format(mu,activation,kernel_initializer))
+        # c = np.load('./Result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/ci.npy'.format(mu,activation,kernel_initializer))
         # plt.plot(c)
         # plt.title('ci-{}-{}-rescaleout'.format(activation,kernel_initializer),fontsize=15)
         # plt.yticks( size=15)#设置大小及加粗 #weight='bold'
