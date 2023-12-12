@@ -9,11 +9,11 @@ if __name__=="__main__":
     args = parser.parse_args()
     read_set_path= args.expr_set_path
     print("path",read_set_path)
-    # expr
-    # expr = Expr_Agent(args=args,
-    #                   Read_set_path=read_set_path,
-    #                   Loss_Save_Path=read_set_path)
-    #
-    # expr.Do_Expr()
+    #expr
+    expr = Expr_Agent(args=args,
+                      Read_set_path=read_set_path,
+                      Loss_Save_Path=read_set_path)
+
+    expr.Do_Expr()
 
 

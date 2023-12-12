@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
+from .excel2yaml import Excel2yaml
 class Expr():
     def __init__(self):
         self.model=None
@@ -100,6 +101,7 @@ class Expr_Agent(Expr):
         self._Random(seed=self.args.seed)
         self._Check()
         self.Prepare_model_Dataloader()
+        Excel2yaml(kwargs["Read_set_path"]).excel2yaml() #convert 2yaml
     def _read_arg_xlsx(self,xls2_object:dict)->Multi_scale2_Args:
 
         args=Multi_scale2_Args(xls2_object["SET"].Scale_Coeff)
@@ -113,6 +115,7 @@ class Expr_Agent(Expr):
         args.Test_Dataset=xls2_object["SET"].Test_Dataset[0]
         args.Save_Path=xls2_object["SET"].Save_Path[0]
         args.batch_size=int(xls2_object["SET"].Batch_size[0])
+        print("test_-",type(xls2_object["SET"].Scale_Coeff[0]))
 
         #  收集子网络的信息
         for i in range(int(args.subnets_number)):
