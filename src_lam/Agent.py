@@ -115,7 +115,7 @@ class Expr_Agent(Expr):
         args.Test_Dataset=xls2_object["SET"].Test_Dataset[0]
         args.Save_Path=xls2_object["SET"].Save_Path[0]
         args.batch_size=int(xls2_object["SET"].Batch_size[0])
-        print("subnet1——",xls2_object["Subnet1"])
+
 
         #  收集子网络的信息
         for i in range(int(args.subnets_number)):
