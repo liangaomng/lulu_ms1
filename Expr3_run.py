@@ -8,7 +8,7 @@ if __name__=="__main__":
     parser.add_argument('--expr_set_path', type=str, help='expr_set_path')#"Expr2d/Expr_3.xlsx"
     args = parser.parse_args()
     read_set_path= args.expr_set_path
-    print("path",read_set_path)
+    print("set_path",read_set_path)
     #expr
     expr = Expr_Agent(args=args,
                       Read_set_path=read_set_path,
