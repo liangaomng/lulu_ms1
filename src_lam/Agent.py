@@ -249,7 +249,7 @@ class Expr_Agent(Expr):
         self.model=self.model.to(self.device)
         for epoch in range(0,self.args.epoch,1):
             epoch_loss = 0.0
-            print(f"using device {self.device}")
+            print(f"we are using device {self.device}")
             for i, (x, y) in enumerate( self._train_loader):
                 x = x.to(self.device)
                 y = y.to(self.device)
