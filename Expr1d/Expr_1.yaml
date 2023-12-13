@@ -12,22 +12,22 @@ SET:
   Valid_Dataset: data/freq_1d/mu_100/val_loader.pt
   lr: 0.0001
 Subnet1:
-- Act_Set: phi
+- Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
-  Layer_Set: 1
-  Residual: 0.0
+  Layer_Set: 1,10,10,10,1
+  Residual: false
 Subnet2:
-- Act_Set: phi
+- Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
-  Layer_Set: 1
-  Residual: 0.0
+  Layer_Set: 1,10,10,10,1
+  Residual: false
 Subnet3:
-- Act_Set: phi
+- Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
-  Layer_Set: 1
-  Residual: 0.0
+  Layer_Set: 1,10,10,10,1
+  Residual: false
 Subnet4:
-- Act_Set: phi
+- Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
-  Layer_Set: 1
-  Residual: 0.0
+  Layer_Set: 1,10,10,10,1
+  Residual: false

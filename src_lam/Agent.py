@@ -115,7 +115,7 @@ class Expr_Agent(Expr):
         args.Test_Dataset=xls2_object["SET"].Test_Dataset[0]
         args.Save_Path=xls2_object["SET"].Save_Path[0]
         args.batch_size=int(xls2_object["SET"].Batch_size[0])
-        print("test_-",type(xls2_object["SET"].Scale_Coeff[0]))
+        print("subnet1——",xls2_object["Subnet1"])
 
         #  收集子网络的信息
         for i in range(int(args.subnets_number)):
@@ -247,9 +247,11 @@ class Expr_Agent(Expr):
         optimizer = optim.Adam(self.model.parameters(), lr=self.args.lr)
         criterion = nn.MSELoss()
         self.model=self.model.to(self.device)
+
+        print(f"we are using device {self.device}")
         for epoch in range(0,self.args.epoch,1):
+
             epoch_loss = 0.0
-            print(f"we are using device {self.device}")
             for i, (x, y) in enumerate( self._train_loader):
                 x = x.to(self.device)
                 y = y.to(self.device)
