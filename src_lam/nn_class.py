@@ -1,3 +1,4 @@
+
 import torch
 import torch.nn as nn
 from .act_fuction import *
@@ -90,7 +91,6 @@ class Multi_scale2(nn.Module):
 
         for index, subnet in enumerate(self.Multi_scale):
             y.append(subnet(self.sub_omegas[index]*x))
-
 
         out = torch.sum(torch.stack(y), dim=0)
 

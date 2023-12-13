@@ -233,6 +233,8 @@ class Expr_Agent(Expr):
         with torch.no_grad():  # 在验证过程中不计算梯度
             sum_val_loss = 0.0
             for inputs, labels in  self._valid_loader:
+                inputs= inputs.to(self.device)
+                labels = labels.to(self.device)
                 outputs = self.model(inputs)
                 val_loss = criterion(outputs, labels)
                 sum_val_loss += val_loss.item()
@@ -244,7 +246,7 @@ class Expr_Agent(Expr):
 
         optimizer = optim.Adam(self.model.parameters(), lr=self.args.lr)
         criterion = nn.MSELoss()
-
+        self.model=self.model.to(self.device)
         for epoch in range(0,self.args.epoch,1):
             epoch_loss = 0.0
             for i, (x, y) in enumerate( self._train_loader):
@@ -275,6 +277,8 @@ class Expr_Agent(Expr):
 
 
             for inputs, labels in self._test_loader:
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
                 outputs = self.model(inputs)
                 test_loss = criterion(outputs, labels)
                 sum_test_loss += test_loss.item()
