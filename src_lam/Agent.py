@@ -233,7 +233,7 @@ class Expr_Agent(Expr):
 
         try:
             with pd.ExcelWriter(self.Save_Path, mode='a', if_sheet_exists='overlay') as writer:
-                self.loss_record_df.to_excel(writer, sheet_name=self.loss_record_sheet, index=False)
+                self.loss_record_df.to_excel(writer, sheet_name="LossRecord", index=False)
         except Exception as e:
             print("An error occurred:", e)
     def _Valid(self,**kwargs):
