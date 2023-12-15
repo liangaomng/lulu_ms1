@@ -86,6 +86,7 @@ class Multi_scale2_Args(Base_Args):
         self.Ini_Set_list = []
         self.Residual_Set_list = []
         self.Save_Path=None
+        self.penalty=None
     def Layer_set(self,layer_set:list)->list: #单子网络
         self.Layer_Set_list=layer_set #[1, 10, 10, 10, 1]
     def Act_set(self,act_list)->np.ndarray:
@@ -375,28 +376,178 @@ class Expr_Agent(Expr):
         self.Train()
         print("we have done the expr")
 
-# class PDE_Agent(Expr):
-#     def __init__(self,**kwargs):
-#         super(PDE_Agent,self).__init__(**kwargs)
-#         self.args=kwargs["args"]
-#         self.model=kwargs["model"]
-#         self.solver=kwargs["solver"]
-#         self._Random(seed=self.args.seed)
-#
-#
-#
-#     def _Valid(self,**kwargs):
-#         epoch=kwargs["epoch"]
-#         self.model.eval()
-#         criterion = nn.MSELoss()
-#
-#         with torch.no_grad():
-#             sum_valid_loss = 0.0
-#
-#             for inputs, labels in self._valid_loader:
-#                 inputs = inputs.to(self.device)
-#                 labels = labels.to(self.device)
-#                 outputs = self.model(inputs)
+class PDE_Agent(Expr):
+    def __init__(self,solver,**kwargs):
+
+        xls2_dict = Return_expr_dict.sheet2dict(kwargs["Read_set_path"])
+        self.args = self._read_arg_xlsx(xls2_dict)  # 读取参数
+        self.model=None
+        self.solver=solver
+        self._Random(seed=self.args.seed)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.plot = Plot_Adaptive() # 画图
+        Excel2yaml(kwargs["Read_set_path"]).excel2yaml() #convert 2yaml
+        self.Prepare_model()
+    def Prepare_model(self):
+        if self.args.model == "mscalenn2":
+            scale_omegas_coeff = self.args.Scale_Coeff #[1,2,3]
+            layer_set=self.args.Layer_Set_list#[1, 10, 10, 10, 1]
+            multi_net_act=self.args.Act_Set_list #[4,3] 4个子网络，每个3层激活
+
+            multi_init_weight=self.args.Ini_Set_list #[4,3] 4个子网络，每个3层初始化
+            sub_layer_number=len(scale_omegas_coeff)
+            residual_en=self.args.Residual_Set_list #[4,3] 4个子网络，每个3层残差
+
+            self.model = Multi_scale2(
+                sub_layer_number = np.array(sub_layer_number),
+                layer_set = np.array(layer_set[0]),#实际是4个list，每个list是一个子网络的神经元
+                act_set = np.array(multi_net_act),
+                ini_set = np.array(multi_init_weight),
+                residual= residual_en[0],
+                scale_number=scale_omegas_coeff
+            )
+        if self.args.model == "fnn":
+            layer_set = self.args.Layer_Set_list#[1, 10, 10, 10, 1]
+            residual_en = self.args.Residual_Set_list
+            activation_set=self.args.Act_Set_list
+
+            self.model = Single_MLP(
+                input_size=layer_set[0],
+                layer_set= layer_set,
+                use_residual= residual_en,
+                activation_set= np.array(activation_set)
+            )
+
+    def _read_arg_xlsx(self,xls2_object:dict):
+
+        args=Multi_scale2_Args(xls2_object["SET"].Scale_Coeff)
+        args.model=xls2_object["SET"].Model[0]
+        args.lr=xls2_object["SET"].lr[0]
+        args.seed=int(xls2_object["SET"].SEED[0])
+        args.epoch=int(xls2_object["SET"].Epoch[0])
+        args.Save_Path=xls2_object["SET"].Save_Path[0]
+        args.batch_size=int(xls2_object["SET"].Batch_size[0])
+        args.penalty=float(xls2_object["SET"].Penalty[0])
+        args.Con_record=xls2_object["SET"].Con_record #list
+        args.mu=xls2_object["SET"].Mu[0]
+
+        #  收集子网络的信息
+        for i in range(int(args.subnets_number)):
+            sub_key="Subnet"+str(i+1)
+            args.Act_Set_list.append(xls2_object[sub_key].Act_Set)
+            args.Layer_Set_list.append(xls2_object[sub_key].Layer_Set)
+            args.Ini_Set_list.append(xls2_object[sub_key].Ini_Set)
+            args.Residual_Set_list.append(xls2_object[sub_key].Residual)
+        print("args",vars(args))
+
+        return args
+    def _Random(self,**kwargs):
+        seed=kwargs["seed"]
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        np.random.seed(seed)
+
+    def Train_PDE(self):
+        self.model.train()
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.lr)
+        criterion = nn.MSELoss()
+        boundary_loss=nn.MSELoss()
+        for epoch in range(self.args.epoch):
+            epoch_loss = 0.0
+            #every epoch to sample in PDE_solver
+            data=self.solver.sample(batch=int(self.args.batch_size))
+            train_data=torch.from_numpy(data).float()
+
+            inputs = train_data[:,:,0:2].to(self.device)
+            labels = train_data[:,:,2:3].to(self.device)
+            #预测
+            outputs = self.model(inputs)
+
+            boundary_pred=outputs[:,2400:,0]
+            boundary_label =  labels[:,2400:,0].to(self.device)
+            b_loss = self.args.penalty * boundary_loss(boundary_pred, boundary_label)
+
+            loss1=criterion(labels[:,0:2400,0], outputs[:,0:2400,0])
+
+            loss = loss1+b_loss
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            epoch_loss = loss.item()
+            print(f"{epoch}_loss",epoch_loss)
+            #画网格
+            if (epoch % 1000 == 0):
+                #self.solver.plot_contour(mu=7*np.pi)#真实解
+
+                x=torch.linspace(-1,1,100)
+                y=torch.linspace(-1,1,100)
+                # 创建一个新的二维张量，其中每行包含来自x和y的相应元素
+                x, y = torch.meshgrid(x, y)
+                xy = torch.stack([x, y], dim=2).reshape(1,-1, 2)
+
+                xy=xy.to(self.device)
+                u=self.model(xy) #(1,1000,2)
+                u=u.cpu().detach().numpy() #[]
+                u=u.reshape(100,100)
+                plt.imshow(u, extent=[-1, 1, -1, 1], origin='lower')
+                plt.colorbar()
+                plt.xlabel('x')
+                plt.ylabel('y')
+                plt.title('Heatmap of u(x, y)')
+                plt.show()
+            # if (epoch % 100 == 0):
+            #     valid_loss=self._Valid(epoch=epoch)
+            #     self._CheckPoint(epoch=epoch)
+            #     test_loss =self._Test4Save(epoch=epoch)
+            #     self._update_loss_record(epoch, train_loss=aver_loss, valid_loss=valid_loss, test_loss=test_loss)
+    def _Valid(self,epoch):
+        self.model.eval()
+        valid_loss = 0.0
+        criterion = nn.MSELoss()
+        for inputs, labels in self._valid_loader:
+            inputs = inputs.to(self.device)
+            labels = labels.to(self.device)
+            outputs = self.model(inputs)
+            loss = criterion(outputs, labels)
+            valid_loss += loss.item()
+        aver_loss = valid_loss / len(self._valid_loader)
+        print('epoch: {}, valid loss: {:.6f}'.format(epoch, aver_loss))
+        return aver_loss
+    def _update_loss_record(self,epoch,**kwargs):
+        train_loss=kwargs["train_loss"]
+        valid_loss=kwargs["valid_loss"]
+        test_loss=kwargs["test_loss"]
+        self.args.train_loss_record.append(train_loss)
+        self.args.valid_loss_record.append(valid_loss)
+        self.args.test_loss_record.append(test_loss)
+        self.args.epoch_record.append(epoch)
+    def _Test4Save(self,epoch):
+        self.model.eval()
+        test_loss = 0.0
+        criterion = nn.MSELoss()
+        for inputs, labels in self._test_loader:
+            inputs = inputs.to(self.device)
+            labels = labels.to(self.device)
+            outputs = self.model(inputs)
+            loss = criterion(outputs, labels)
+            test_loss += loss.item()
+        aver_loss = test_loss / len(self._test_loader)
+        print('epoch: {}, test loss: {:.6f}'.format(epoch, aver_loss))
+        return aver_loss
+    def _CheckPoint(self,**kwargs):
+        epoch=kwargs["epoch"]
+        dir_name=self.args.Save_Path+"/"+self.args.model+".pth"
+        if os.path.exists(self.args.Save_Path):
+            pass
+        else:
+            os.mkdir(self.args.Save_Path)
+
+        torch.save(self.model.state_dict(), dir_name)
+        print(f"save model at epoch {epoch}")
+    def Do_Expr(self):
+        self.Train_PDE()
+        print("we have done the expr")
+
 
 
 

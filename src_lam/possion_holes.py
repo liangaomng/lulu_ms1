@@ -3,7 +3,12 @@ import matplotlib.pyplot as plt
 
 
 class PoissonEquationWithHoles:
-    def __init__(self, domain_size, circle_params, ellipse_params, num_samples_domain, num_samples_circles,
+    def __init__(self,
+                 domain_size,
+                 circle_params,
+                 ellipse_params,
+                 num_samples_domain,
+                 num_samples_circles,
                  num_samples_ellipse):
         """
         初始化函数
@@ -14,6 +19,7 @@ class PoissonEquationWithHoles:
         :param num_samples_circles: 三个圆的采样数量列表
         :param num_samples_ellipse: 椭圆的采样数量
         """
+
         self.domain_size = domain_size
         self.circle_params = circle_params
         self.ellipse_params = ellipse_params
@@ -37,7 +43,6 @@ class PoissonEquationWithHoles:
         # Convert list of points to NumPy arrays
         x_samples, y_samples = zip(*points)  # Unzipping the list of tuples
         return np.array(x_samples), np.array(y_samples)
-
     def sample_circle_boundary(self, a, b, r, num_samples):
         x_samples = a + np.random.uniform(-r, r, num_samples)
         y_samples = b + np.random.choice([-1, 1], num_samples) * np.sqrt(r ** 2 - (x_samples - a) ** 2)
@@ -70,7 +75,7 @@ class PoissonEquationWithHoles:
         plt.show()
     def exact_solution(self, x1, x2, mu):
         return np.sin(mu * x1) * np.sin(mu * x2)
-    def plot_contour(self, mu):
+    def plot_contour(self, mu,**kwargs):
         # Generate grid for the domain
         x = np.linspace(-self.domain_size, self.domain_size, 1000)
         y = np.linspace(-self.domain_size, self.domain_size, 1000)
@@ -97,9 +102,7 @@ class PoissonEquationWithHoles:
         plt.xlabel('x1')
         plt.ylabel('x2')
         plt.show()
-
-
-    def sample_exact_solution(self, mu):
+    def sample_exact_solution(self, mu=7*np.pi):
         # Sample points from the domain boundary
         x_domain, y_domain = self.sample_domain_boundary()
         u_domain = self.exact_solution(x_domain, y_domain, mu)
@@ -123,8 +126,24 @@ class PoissonEquationWithHoles:
         u_ellipse = self.exact_solution(x_ellipse, y_ellipse, mu)
         ellipse_points_values = np.column_stack((x_ellipse, y_ellipse, u_ellipse))
         all_points_values = np.vstack((all_points_values, ellipse_points_values))
-
+        #5000,3
         return all_points_values
+    def sample(self,batch):
+        '''
+        return [batch,5000,3]
+        Returns:
+        '''
+        all_points_values_all=None
+        for j in range(batch):
+            all_points_values=self.sample_exact_solution(mu=7*np.pi)
+            all_points_values=all_points_values[np.newaxis,:,:]
+            try:
+                all_points_values_all=np.concatenate((all_points_values_all,all_points_values),axis=0)
+            except:
+                all_points_values_all=all_points_values
+
+
+        return all_points_values_all
 
 if __name__=="__main__":
 
@@ -136,13 +155,17 @@ if __name__=="__main__":
     num_samples_circles = [550, 1100, 550]  # 三个圆的采样数量
     num_samples_ellipse = 400
 
-    poisson = PoissonEquationWithHoles(domain_size, circle_params, ellipse_params, num_samples_domain, num_samples_circles,
-                                   num_samples_ellipse)
+    poisson = PoissonEquationWithHoles(domain_size,
+                                       circle_params,
+                                       ellipse_params,
+                                       num_samples_domain,
+                                       num_samples_circles,
+                                       num_samples_ellipse)
     poisson.sample_visualize()
     poisson.plot_contour(mu=7*np.pi)
     #5000,3
     sampled_points_values = poisson.sample_exact_solution(mu=7*np.pi)
-
-    # print(sampled_points_values)
+    sample=poisson.sample(10)
+    print(sample.shape)
     # plt.figure(figsize=(8, 8))
     # plt.scatter(sampled_points_values[:, 0], sampled_points_values[:, 1], c=sampled_points_values[:, 2])

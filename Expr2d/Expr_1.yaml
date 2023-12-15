@@ -1,0 +1,26 @@
+SET: []
+Subnet1:
+- Act_Set: phi,phi,phi
+  Ini_Set: xavier_uniform
+  Layer_Set: 2,200,200,200,1
+  Residual: false
+Subnet2:
+- Act_Set: phi,phi,phi
+  Ini_Set: xavier_uniform
+  Layer_Set: 2,200,200,200,1
+  Residual: false
+Subnet3:
+- Act_Set: phi,phi,phi
+  Ini_Set: xavier_uniform
+  Layer_Set: 2,200,200,200,1
+  Residual: false
+Subnet4:
+- Act_Set: phi,phi,phi
+  Ini_Set: xavier_uniform
+  Layer_Set: 2,200,200,200,1
+  Residual: false
+Subnet5:
+- Act_Set: phi,phi,phi
+  Ini_Set: xavier_uniform
+  Layer_Set: 2,200,200,200,1
+  Residual: false

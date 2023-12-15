@@ -1,7 +1,7 @@
 SET:
 - Batch_size: 256
   Con_record: 0,2000,5000
-  Epoch: 5100
+  Epoch: 5
   Model: mscalenn2
   Note: note
   SEED: 1
