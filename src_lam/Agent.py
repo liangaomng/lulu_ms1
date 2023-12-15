@@ -205,9 +205,9 @@ class Expr_Agent(Expr):
                             valid_loss=None,
                             test_loss=None):
         # # 创建一个新记录的DataFrame
-        train_loss=train_loss.cpu().detach().numpy()
-        valid_loss=valid_loss.cpu().detach().numpy()
-        test_loss=test_loss.cpu().detach().numpy()
+
+
+
         new_record_df = pd.DataFrame({
             'epoch': [epoch],
             'train_loss': [train_loss],
@@ -226,7 +226,7 @@ class Expr_Agent(Expr):
         # 否则，读取现有文件
         else:
             self.loss_record_df = pd.read_excel(self.Save_Path,
-                                                sheet_name=self.loss_record_sheet)
+                                                sheet_name="LossRecord")
             print("no problem",flush=True)
 
         # 将新记录追加到DataFrame中
