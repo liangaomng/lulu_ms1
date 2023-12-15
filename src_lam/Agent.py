@@ -205,6 +205,9 @@ class Expr_Agent(Expr):
                             valid_loss=None,
                             test_loss=None):
         # # 创建一个新记录的DataFrame
+        train_loss=train_loss.cpu().detach().numpy()
+        valid_loss=valid_loss.cpu().detach().numpy()
+        test_loss=test_loss.cpu().detach().numpy()
         new_record_df = pd.DataFrame({
             'epoch': [epoch],
             'train_loss': [train_loss],
@@ -234,6 +237,7 @@ class Expr_Agent(Expr):
         try:
             with pd.ExcelWriter(self.Save_Path, mode='a', if_sheet_exists='overlay') as writer:
                 self.loss_record_df.to_excel(writer, sheet_name="LossRecord", index=False)
+                print("save successfully")
         except Exception as e:
             print("An error occurred:", e)
     def _Valid(self,**kwargs):
