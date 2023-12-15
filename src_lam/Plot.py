@@ -8,7 +8,7 @@ class Plot_Adaptive:
         self.fig = None
         self.axes = None
     def _create_subplot_grid1(self,nrow, ncol):
-        self.fig = plt.figure(figsize=(1.4*ncol * 3, 1.4*nrow * 3))
+        self.fig = plt.figure(figsize=(1.6*ncol * 3, 1.4*nrow * 3))
         gs = GridSpec(nrow, ncol, figure=self.fig,hspace=0.4,wspace=0.3)
         self.axes = []
 

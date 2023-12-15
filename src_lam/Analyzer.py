@@ -57,11 +57,11 @@ class Analyzer4scale(Analyzer):
         # 添加颜色条
         sm = ScalarMappable(cmap=cmap, norm=norm)
         sm.set_array([])
-        fig.colorbar(sm, ax=ax)  # 为子图ax添加颜色条
+        #fig.colorbar(sm, ax=ax)  # 为子图ax添加颜色条
         # 设置图表标题和轴标签
         ax.set_title('Contribution per Scale')
         ax.set_xlabel('Scale Index')
-        ax.set_ylabel('Contribution')
+        ax.set_ylabel('Contribution',fontsize=10)
         ax.grid(True)
         ax.legend(loc='best',fontsize=6)
 

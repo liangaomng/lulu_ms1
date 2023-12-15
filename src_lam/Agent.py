@@ -266,7 +266,7 @@ class Expr_Agent(Expr):
             aver_loss = epoch_loss / len( self._train_loader)
 
             print('epoch: {}, train loss: {:.6f}'.format(epoch, aver_loss))
-            if (epoch % 10 == 0):
+            if (epoch % 100 == 0):
                 valid_loss=self._Valid(epoch=epoch,num_epochs=self.args.epoch)
                 self._CheckPoint(epoch=epoch)
                 test_loss =self._Test4Save(epoch=epoch)
