@@ -12,9 +12,9 @@ V0 = A  # Reference volume flow speed
 
 # Define the fluid velocity and acceleration
 # For simplicity, we assume a sinusoidal wave for the velocity potential
-wave_frequency = 100.0  # Frequency of the passing wave in Hz
+wave_frequency = 10.0  # Frequency of the passing wave in Hz
 wave_amplitude = 1.0  # Amplitude of the wave in m/s
-time = np.linspace(0, 2*np.pi, 100) / wave_frequency  # Two periods of wave
+time = np.linspace(0, 20000*np.pi, 100) / wave_frequency  # Two periods of wave
 u_x = wave_amplitude * np.sin(wave_frequency * time)  # Wave velocity profile
 du_x_dt = np.gradient(u_x, time)  # Time derivative of the velocity
 

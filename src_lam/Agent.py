@@ -194,31 +194,41 @@ class Expr_Agent(Expr):
 
         try:
             self.loss_record_df = pd.read_excel(self.loss_record_file,
-                                                sheet_name="Result")
+                                                sheet_name="LossRecord")
         except Exception as e:
             self.loss_record_df = pd.DataFrame(columns=['epoch',
                                                         'train_loss',
                                                         'valid_loss',
                                                         'test_loss'])
-    def _update_loss_record(self, epoch, train_loss=None, valid_loss=None, test_loss=None):
-        # 创建一个新记录的DataFrame
+    def _update_loss_record(self, epoch,
+                            train_loss=None,
+                            valid_loss=None,
+                            test_loss=None):
+        # # 创建一个新记录的DataFrame
         new_record_df = pd.DataFrame({
             'epoch': [epoch],
             'train_loss': [train_loss],
             'valid_loss': [valid_loss],
             'test_loss': [test_loss]
         })
-
+        #
         # 如果文件不存在，则初始化一个空的DataFrame
         if not os.path.isfile(self.Save_Path):
-            self.loss_record_df = pd.DataFrame(columns=['epoch', 'train_loss', 'valid_loss', 'test_loss'])
+            self.loss_record_df = pd.DataFrame(columns=['epoch',
+                                                        'train_loss',
+                                                        'valid_loss',
+                                                        'test_loss'])
+            print("problem",flush=True)
 
         # 否则，读取现有文件
         else:
-            self.loss_record_df = pd.read_excel(self.Save_Path, sheet_name=self.loss_record_sheet)
+            self.loss_record_df = pd.read_excel(self.Save_Path,
+                                                sheet_name=self.loss_record_sheet)
+            print("no problem",flush=True)
 
         # 将新记录追加到DataFrame中
-        self.loss_record_df = pd.concat([self.loss_record_df, new_record_df], ignore_index=True).drop_duplicates(
+        self.loss_record_df = pd.concat([self.loss_record_df, new_record_df],
+                                        ignore_index=True).drop_duplicates(
             subset=['epoch'])
 
         try:
@@ -361,7 +371,9 @@ class Expr_Agent(Expr):
         fig.savefig('{}/combined_loss_{}.png'.format(self.args.Save_Path, epoch),
                     bbox_inches='tight', format='png')
         # # 关闭图表以释放内存
-        # plt.close(fig)
+        if epoch==self.args.epoch:
+            plt.close(fig)
+
     def _CheckPoint(self,**kwargs):
             epoch=kwargs["epoch"]
             dir_name=self.args.Save_Path+"/"+self.args.model+".pth"
