@@ -140,7 +140,9 @@ if __name__=="__main__":
                                    num_samples_ellipse)
     poisson.sample_visualize()
     poisson.plot_contour(mu=7*np.pi)
+    #5000,3
     sampled_points_values = poisson.sample_exact_solution(mu=7*np.pi)
+
     # print(sampled_points_values)
     # plt.figure(figsize=(8, 8))
     # plt.scatter(sampled_points_values[:, 0], sampled_points_values[:, 1], c=sampled_points_values[:, 2])

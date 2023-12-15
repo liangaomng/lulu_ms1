@@ -374,6 +374,30 @@ class Expr_Agent(Expr):
     def Do_Expr(self):
         self.Train()
         print("we have done the expr")
+# class PDE_Agent(Expr):
+#     def __init__(self,**kwargs):
+#         super(PDE_Agent,self).__init__(**kwargs)
+#         self.args=kwargs["args"]
+#         self.model=kwargs["model"]
+#         self.solver=kwargs["solver"]
+#         self._Random(seed=self.args.seed)
+#
+#
+#
+#     def _Valid(self,**kwargs):
+#         epoch=kwargs["epoch"]
+#         self.model.eval()
+#         criterion = nn.MSELoss()
+#
+#         with torch.no_grad():
+#             sum_valid_loss = 0.0
+#
+#             for inputs, labels in self._valid_loader:
+#                 inputs = inputs.to(self.device)
+#                 labels = labels.to(self.device)
+#                 outputs = self.model(inputs)
+
+
 
 
 if __name__=="__main__":

@@ -52,7 +52,6 @@ class Single_MLP(nn.Module):
             # 对于除了第一层之外的每个激活层后，应用残差连接
             if not isinstance(layer, nn.Linear) and i > 1 and self.use_residual == True:
                 # 由于输入和输出维度相同，可以直接添加
-                print("residual")
                 x = layer(x) + identity
 
                 identity = x  # 更新 identity
