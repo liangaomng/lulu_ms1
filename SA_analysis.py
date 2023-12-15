@@ -1,53 +1,78 @@
 import torch
-from captum.attr import IntegratedGradients
-from captum.attr import visualization as viz
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+from captum.attr import LayerConductance
 from src_lam.Agent import Expr_Agent
 import argparse
-import numpy as np
-from captum.attr import LayerConductance
-# 读取数据
-parser = argparse.ArgumentParser(description="Pytorch")
-args = parser.parse_args()
-read_set_path = "Expr1d/Expr_1.xlsx"
-expr = Expr_Agent(args=args,
-                  Read_set_path=read_set_path,
-                  Loss_Save_Path=read_set_path)
-import matplotlib.pyplot as plt
 
-state_dict =torch.load("/Users/liangaoming/Desktop/neural_study/lulu_ms/Result/Expr1_/mscalenn2.pth")
+class ModelAnalyzer:
+    def __init__(self, model_path, read_set_path):
+        self.model_path = model_path
+        self.read_set_path = read_set_path
+        self.model,self.scale_coeffs = self._load_model_scale_set()
+        self.contributions= None
+    def _load_model_scale_set(self):
+        # 配置解析器和参数
+        parser = argparse.ArgumentParser(description="Pytorch")
+        args = parser.parse_args()
+        # 创建模型实例
+        expr = Expr_Agent(args=args,
+                          Read_set_path=self.read_set_path,
+                          Loss_Save_Path=self.read_set_path)
+        # 加载模型状态
+        state_dict = torch.load(self.model_path)
+        expr.model.load_state_dict(state_dict)
+        expr.model.eval()
+        print("实验的sacles",expr.args.Scale_Coeff)
+        return expr.model, expr.args.Scale_Coeff
 
-expr.model.load_state_dict(state_dict)
-print(state_dict.keys())
-#
-expr.model.eval()
-# 这里的键名应与模型的状态字典中的键名匹配
-# 定位到您关注的层
-model = expr.model
-input_tensor= torch.tensor([[1]])
+    def _analyze_scales(self, input_tensor= torch.tensor([[1]]),
+                       baseline=-1,
+                       n_steps=1000,
+                       target=0):
+        scales_contribution = []
+        for i, scale in enumerate(self.model.Multi_scale):
+            layer_conductance = LayerConductance(self.model, scale)
+            cond = layer_conductance.attribute(input_tensor, baselines=baseline, n_steps=n_steps, target=target)
+            scales_contribution.append(cond.item())
+        return scales_contribution
 
-# 存储每个 scale 的贡献
-scales_contribution = []
+    def plot_contributions(self):
 
-for i, scale in enumerate(model.Multi_scale):
-    layer_conductance = LayerConductance(model, scale)
-    cond = layer_conductance.attribute(input_tensor, target=0)
+        self.contributions=self._analyze_scales()
+        # 归一化 scale_coeffs 以便用于颜色映射
+        norm = Normalize(vmin=min(self.scale_coeffs),
+                         vmax=max(self.scale_coeffs))
+        normed_coeffs = norm(self.scale_coeffs)
+        fig, ax = plt.subplots()
+        cmap = plt.cm.Greens
+        for i, (contrib, coeff_norm) in enumerate(zip(self.contributions, normed_coeffs)):
+            plt.bar(i, contrib, color=cmap(coeff_norm), label=f'Scale {i}: Coeff {self.scale_coeffs[i]}')
+            plt.text(i, contrib, f'{self.scale_coeffs[i]}', ha='center', va='bottom')
 
-    # 我们获取每个神经元平均贡献的绝对值，确保它是一个标量
-    scales_contribution.append(cond.abs().item())
+        # 添加颜色条
+        sm = ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        plt.colorbar(sm, label='Scale-Coefficients')
 
-# 横轴 - 'scale' 的索引
-scales = np.arange(len(scales_contribution))
+        # 设置图表标题和轴标签
+        plt.title('Contribution per Scale')
+        plt.xlabel('Scale Index')
+        plt.ylabel('Contribution')
+        plt.grid(True)
+        plt.legend(loc='best')
+        # 返回图形对象
+        return fig
 
-# 创建柱状图
-plt.bar(scales, scales_contribution, color='skyblue')
 
-# 添加标题和轴标签
-plt.title('Contribution per Scale')
-plt.xlabel('Scale Index')
-plt.ylabel('Contribution')
+if __name__== "__main__":
+    # 使用示例
+    model_path = "/Users/liangaoming/Desktop/neural_study/lulu_ms/Result/Expr1_3/mscalenn2.pth"
+    read_set_path = "Expr1d/Expr_3.xlsx"
 
-# 显示横轴标签
-plt.xticks(scales)
+    analyzer = ModelAnalyzer(model_path, read_set_path)
 
-# 显示图形
-plt.show()
+    fig=analyzer.plot_contributions()
+    plt.show()

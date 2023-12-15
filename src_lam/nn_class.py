@@ -33,13 +33,14 @@ class Single_MLP(nn.Module):
             #输出
             elif i==layer_depth-1:
                 self.layers.append(
-                    nn.Linear(layer_width, 1)
+                              nn.Linear(layer_width, 1)
                 )
 
             # 中间
             else:
                 self.layers.append(
                     nn.Linear(layer_width, layer_width)
+
                 )
                 self.layers.append(
                     kwargs["activation_set"][i]
@@ -49,12 +50,15 @@ class Single_MLP(nn.Module):
         identity = x
         for i, layer in enumerate(self.layers):
             # 对于除了第一层之外的每个激活层后，应用残差连接
-            if not isinstance(layer, nn.Linear) and i > 1:
+            if not isinstance(layer, nn.Linear) and i > 1 and self.use_residual == True:
                 # 由于输入和输出维度相同，可以直接添加
+
                 x = layer(x) + identity
+
                 identity = x  # 更新 identity
             else:
                 x = layer(x)
+
                 if i % 2 == 0:  # 在每个线性层后更新 identity
                     identity = x
 

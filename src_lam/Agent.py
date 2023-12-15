@@ -2,7 +2,6 @@ import numpy as np
 import torch
 from .nn_class import  Multi_scale2,Single_MLP
 from torch import optim
-import argparse
 from torch import nn
 from abc import abstractmethod
 from src_lam.xls2_object import Return_expr_dict
@@ -11,6 +10,9 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from .excel2yaml import Excel2yaml
+from .Plot import Plot_Adaptive
+from collections import deque
+from .Analyzer import Analyzer4scale
 class Expr():
     def __init__(self):
         self.model=None
@@ -54,6 +56,7 @@ class Base_Args():
         self.Save_Path=None
         self.batch_size=None
         self._note=None
+        self.Con_record=None
 
     @abstractmethod
     def Layer_set(self,layer_set:list):
@@ -101,6 +104,7 @@ class Expr_Agent(Expr):
         self._Random(seed=self.args.seed)
         self._Check()
         self.Prepare_model_Dataloader()
+        self.plot = Plot_Adaptive() # 画图
         Excel2yaml(kwargs["Read_set_path"]).excel2yaml() #convert 2yaml
     def _read_arg_xlsx(self,xls2_object:dict)->Multi_scale2_Args:
 
@@ -115,7 +119,7 @@ class Expr_Agent(Expr):
         args.Test_Dataset=xls2_object["SET"].Test_Dataset[0]
         args.Save_Path=xls2_object["SET"].Save_Path[0]
         args.batch_size=int(xls2_object["SET"].Batch_size[0])
-
+        args.Con_record=xls2_object["SET"].Con_record #list
 
         #  收集子网络的信息
         for i in range(int(args.subnets_number)):
@@ -195,7 +199,6 @@ class Expr_Agent(Expr):
                                                         'train_loss',
                                                         'valid_loss',
                                                         'test_loss'])
-
     def _update_loss_record(self, epoch, train_loss=None, valid_loss=None, test_loss=None):
         # 创建一个新记录的DataFrame
         new_record_df = pd.DataFrame({
@@ -222,7 +225,6 @@ class Expr_Agent(Expr):
                 self.loss_record_df.to_excel(writer, sheet_name=self.loss_record_sheet, index=False)
         except Exception as e:
             print("An error occurred:", e)
-
     def _Valid(self,**kwargs):
 
         epoch = kwargs["epoch"]
@@ -264,7 +266,7 @@ class Expr_Agent(Expr):
             aver_loss = epoch_loss / len( self._train_loader)
 
             print('epoch: {}, train loss: {:.6f}'.format(epoch, aver_loss))
-            if(epoch % 5 == 0):
+            if (epoch % 10 == 0):
                 valid_loss=self._Valid(epoch=epoch,num_epochs=self.args.epoch)
                 self._CheckPoint(epoch=epoch)
                 test_loss =self._Test4Save(epoch=epoch)
@@ -288,14 +290,13 @@ class Expr_Agent(Expr):
         avg_test_loss = sum_test_loss / len(self._test_loader)
 
         # 画loss的值
-        if (epoch % 100 == 0):
-           self._save4plot(epoch, avg_test_loss)
+
+        self._save4plot(epoch, avg_test_loss)
 
         print(f'Test Loss: {avg_test_loss:.6f}')
         return avg_test_loss
     def _save4plot(self,epoch,avg_test_loss):
         # 创建两个子图，上下布局
-
         avg_test_loss= avg_test_loss
         # 加载测试数据集
         test_data = torch.load(self.args.Test_Dataset)
@@ -304,26 +305,28 @@ class Expr_Agent(Expr):
         x_test = test_data.tensors[0].numpy()
         y_true = test_data.tensors[1].numpy()
 
+        #analyzer
+        analyzer=Analyzer4scale(model=self.model,
+                                scale_coeffs=self.args.Scale_Coeff)
+        # 读取损失记录
+        loss_record_df = pd.read_excel(self.Save_Path, sheet_name=self.loss_record_sheet)
 
         # 获取模型预测
         pred = self.model(torch.from_numpy(x_test).float().to(self.device)).detach().cpu().numpy()
         if x_test.shape[1] == 1:
-            fig, ax = plt.subplots(2, 1, figsize=(20, 8))
-            # 在第一个子图上绘制预测值的散点图
-            ax[0].scatter(x_test, pred, label="Pred", color="red")
-            # 在第一个子图上绘制真实值的散点图
-            ax[0].scatter(x_test, y_true, label="True", color="blue")
-            # 设置第一个子图的图例、坐标轴标签和标题
-            ax[0].legend(loc="best", fontsize=16)
-            ax[0].set_xlabel('x', fontsize=16)
-            ax[0].set_ylabel('y', fontsize=16)
-            ax[0].get_xaxis().get_major_formatter().set_useOffset(False)
-            ax[0].tick_params(labelsize=16, width=2, colors='black')
-            ax[0].set_title("Test_MSE={:.6f}_Epoch{}".format(avg_test_loss, epoch))
+            fig,axes=self.plot.plot_1d(nrow=3,ncol=3,
+                                  loss_record_df=loss_record_df,
+                                  analyzer=analyzer,
+                                  x_test=x_test,
+                                  y_true=y_true,
+                                  pred=pred,
+                                  epoch=epoch,
+                                  avg_test_loss=avg_test_loss,
+                                  contribution_record=self.args.Con_record,)
+
         elif x_test.shape[1] == 2:
             #第一个图画预测热力图
             fig, ax = plt.subplots(3, 1, figsize=(20, 14))
-            from scipy.interpolate import griddata
             from scipy.interpolate import Rbf
             # 创建网格
             grid_x, grid_y = np.mgrid[x_test[:, 0].min():x_test[:, 0].max():100j,
@@ -353,34 +356,11 @@ class Expr_Agent(Expr):
             ax[1].set_xlabel('X Coordinate')
             ax[1].set_ylabel('Y Coordinate')
 
-
-
-
-        # 读取损失记录
-        loss_record_df = pd.read_excel(self.Save_Path, sheet_name=self.loss_record_sheet)
-
-        # 在第最后子图上绘制损失曲线
-        ax[-1].plot(loss_record_df["epoch"], loss_record_df["train_loss"], label="Train Loss", color="blue")
-        ax[-1].plot(loss_record_df["epoch"], loss_record_df["valid_loss"], label="Valid Loss", color="red")
-        ax[-1].plot(loss_record_df["epoch"], loss_record_df["test_loss"], label="Test Loss", color="green")
-
-        # 设置第二个子图的图例、坐标轴标签和标题
-
-        ax[-1].set_yscale('log')  # 将y轴设置为对数尺度
-        ax[-1].legend(loc="best", fontsize=16)
-        ax[-1].set_xlabel('Epoch', fontsize=16)
-        ax[-1].set_ylabel('Loss', fontsize=16)
-        ax[-1].get_xaxis().get_major_formatter().set_useOffset(False)
-        ax[-1].tick_params(labelsize=16, width=2, colors='black')
-        ax[-1].set_title("Loss_Epoch{}".format(epoch))
-        plt.tight_layout()
-
         # 保存整个图表
         fig.savefig('{}/combined_loss_{}.png'.format(self.args.Save_Path, epoch),
                     bbox_inches='tight', format='png')
-
-        # 关闭图表以释放内存
-        plt.close(fig)
+        # # 关闭图表以释放内存
+        # plt.close(fig)
     def _CheckPoint(self,**kwargs):
             epoch=kwargs["epoch"]
             dir_name=self.args.Save_Path+"/"+self.args.model+".pth"
@@ -388,9 +368,9 @@ class Expr_Agent(Expr):
                 pass
             else:
                 os.mkdir(self.args.Save_Path)
-            if epoch % 100==0:
-                torch.save(self.model.state_dict(), dir_name)
-                print(f"save model at epoch {epoch}")
+
+            torch.save(self.model.state_dict(), dir_name)
+            print(f"save model at epoch {epoch}")
     def Do_Expr(self):
         self.Train()
         print("we have done the expr")
@@ -398,8 +378,3 @@ class Expr_Agent(Expr):
 
 if __name__=="__main__":
     pass
-
-
-
-
-
