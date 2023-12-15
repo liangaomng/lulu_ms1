@@ -235,7 +235,7 @@ class Expr_Agent(Expr):
             subset=['epoch'])
 
         try:
-            with pd.ExcelWriter(self.Save_Path, mode='a', if_sheet_exists='overlay') as writer:
+            with pd.ExcelWriter(self.Save_Path, mode='w') as writer:
                 self.loss_record_df.to_excel(writer, sheet_name="LossRecord", index=False)
                 print("save successfully")
         except Exception as e:
