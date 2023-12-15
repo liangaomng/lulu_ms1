@@ -5,7 +5,7 @@ SET:
   Model: mscalenn2
   Note: note
   SEED: 1
-  Save_Path: Result/Expr1_
+  Save_Path: Result/Expr1_1
   Scale_Coeff: 1,2,4,8,16,32
   Sub_number: 4
   Test_Dataset: data/freq_1d/mu_70/test_loader.pt

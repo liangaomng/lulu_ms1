@@ -25,6 +25,8 @@ class Analyzer4scale(Analyzer):
                        n_steps=1000,
                        target=0)->list:
         scales_contribution = []
+        device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        input_tensor=input_tensor.float().to(device)
         for i, scale in enumerate(self.model.Multi_scale):
             layer_conductance = LayerConductance(self.model, scale)
             cond = layer_conductance.attribute(input_tensor, baselines=baseline, n_steps=n_steps, target=target)
