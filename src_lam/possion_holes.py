@@ -61,7 +61,7 @@ class PoissonEquationWithHoles:
         # 圆的采样点
         for i, (a, b, r) in enumerate(self.circle_params):
             x_circle, y_circle = self.sample_circle_boundary(a, b, r, self.num_samples_circles[i])
-            plt.scatter(x_circle, y_circle, label=f'Circle {i + 1} center=({a},{b}), r={r}')
+
 
         # 椭圆的采样点
         for h, k, a, b in self.ellipse_params:
@@ -74,6 +74,7 @@ class PoissonEquationWithHoles:
         plt.legend(loc='upper right')
         plt.show()
     def exact_solution(self, x1, x2, mu):
+
         return np.sin(mu * x1) * np.sin(mu * x2)
     def plot_contour(self, mu,**kwargs):
         # Generate grid for the domain
@@ -87,16 +88,16 @@ class PoissonEquationWithHoles:
         # Mask the holes (circles and ellipse)
         for (center_x, center_y, radius) in self.circle_params:
             mask = (X - center_x)**2 + (Y - center_y)**2 <= radius**2
-            U[mask] = np.nan  # Assign NaN to holes
+            U[mask] = 0  # Assign NaN to holes
 
         # Mask the ellipse
         h, k, a, b = self.ellipse_params[0]
         ellipse_mask = (X - h)**2 / a**2 + (Y - k)**2 / b**2 <= 1
-        U[ellipse_mask] = np.nan  # Assign NaN to the elliptic hole
+        U[ellipse_mask] = 0  # Assign NaN to the elliptic hole
 
         # Plot the contour of the solution, avoiding the holes
         plt.figure(figsize=(8, 8))
-        contour = plt.contourf(X, Y, U, levels=50, cmap='bwr')
+        contour = plt.contourf(X, Y, U, levels=100, cmap='bwr')
         plt.colorbar(contour)
         plt.title('Plot of the Exact Solution')
         plt.xlabel('x1')
@@ -116,14 +117,14 @@ class PoissonEquationWithHoles:
         # Sample and combine points from the circle boundaries
         for i, (a, b, r) in enumerate(self.circle_params):
             x_circle, y_circle = self.sample_circle_boundary(a, b, r, self.num_samples_circles[i])
-            u_circle = self.exact_solution(x_circle, y_circle, mu)
+            u_circle = np.zeros_like(x_circle)
             circle_points_values = np.column_stack((x_circle, y_circle, u_circle))
             all_points_values = np.vstack((all_points_values, circle_points_values))
 
         # Sample and combine points from the ellipse boundary
         h, k, a, b = self.ellipse_params[0]
         x_ellipse, y_ellipse = self.sample_ellipse_boundary(h, k, a, b, self.num_samples_ellipse)
-        u_ellipse = self.exact_solution(x_ellipse, y_ellipse, mu)
+        u_ellipse = np.zeros_like(x_ellipse)
         ellipse_points_values = np.column_stack((x_ellipse, y_ellipse, u_ellipse))
         all_points_values = np.vstack((all_points_values, ellipse_points_values))
         #5000,3
@@ -165,7 +166,9 @@ if __name__=="__main__":
     poisson.plot_contour(mu=7*np.pi)
     #5000,3
     sampled_points_values = poisson.sample_exact_solution(mu=7*np.pi)
-    sample=poisson.sample(10)
-    print(sample.shape)
-    # plt.figure(figsize=(8, 8))
-    # plt.scatter(sampled_points_values[:, 0], sampled_points_values[:, 1], c=sampled_points_values[:, 2])
+    sample=poisson.sample(1)
+    print(sample)#[1,5000,3]
+
+    plt.scatter(sampled_points_values[:, 0], sampled_points_values[:, 1],
+                c=sampled_points_values[:, 2])
+    plt.show()

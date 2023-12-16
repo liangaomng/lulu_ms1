@@ -31,6 +31,7 @@ class Excel2yaml():
                 # 转换为字典
                 sheets_data[sheet] = df.to_dict(orient='records')
                 # 将字典转换为 YAML 格式的字符串
+
         yaml_data = yaml.dump(sheets_data, allow_unicode=True)
 
         # 将 YAML 数据保存到文件

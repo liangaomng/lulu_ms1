@@ -403,6 +403,7 @@ class PDE_Agent(Expr):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.plot = Plot_Adaptive() # 画图
         Excel2yaml(kwargs["Read_set_path"]).excel2yaml() #convert 2yaml
+
         self.Prepare_model()
     def Prepare_model(self):
         if self.args.model == "mscalenn2":
@@ -479,8 +480,10 @@ class PDE_Agent(Expr):
             #预测
             outputs = self.model(inputs)
 
-            boundary_pred=outputs[:,2400:,0]
-            boundary_label =  labels[:,2400:,0].to(self.device)
+            boundary_pred=outputs[:,2600:,0]
+            boundary_label =  labels[:,2600:,0].to(self.device)
+
+
             b_loss = self.args.penalty * boundary_loss(boundary_pred, boundary_label)
 
             loss1=criterion(labels[:,0:2400,0], outputs[:,0:2400,0])
@@ -491,26 +494,34 @@ class PDE_Agent(Expr):
             optimizer.step()
             epoch_loss = loss.item()
             print(f"{epoch}_loss",epoch_loss)
-            #画网格
-            if (epoch % 1000 == 0):
-                #self.solver.plot_contour(mu=7*np.pi)#真实解
-
-                x=torch.linspace(-1,1,100)
-                y=torch.linspace(-1,1,100)
-                # 创建一个新的二维张量，其中每行包含来自x和y的相应元素
-                x, y = torch.meshgrid(x, y)
-                xy = torch.stack([x, y], dim=2).reshape(1,-1, 2)
-
-                xy=xy.to(self.device)
-                u=self.model(xy) #(1,1000,2)
-                u=u.cpu().detach().numpy() #[]
-                u=u.reshape(100,100)
-                plt.imshow(u, extent=[-1, 1, -1, 1], origin='lower')
-                plt.colorbar()
-                plt.xlabel('x')
-                plt.ylabel('y')
-                plt.title('Heatmap of u(x, y)')
-                plt.show()
+            # #画网格
+            # if (epoch % 100 == 0):
+            #     #self.solver.plot_contour(mu=7*np.pi)#真实解
+            #     fig,ax=plt.subplots(1,2,figsize=(10,5))
+            #     # x=torch.linspace(-1,1,1000)
+            #     # y=torch.linspace(-1,1,1000)
+            #     # 创建一个新的二维张量，其中每行包含来自x和y的相应元素
+            #     # x, y = torch.meshgrid(x, y)
+            #     # xy = torch.stack([x, y], dim=2).reshape(1,-1, 2)
+            #     #
+            #     # xy=xy.to(self.device)
+            #     # u=self.model(xy) #(1,1000,2)
+            #     # u=u.cpu().detach().numpy() #[]
+            #     # u=u.reshape(1000,1000)
+            #     labels=labels[0,:].cpu().detach().numpy()
+            #     preds=outputs[0,:].cpu().detach().numpy()
+            #     xy=inputs[0,:,0:2].cpu().detach().numpy()
+            #     print("xy",xy.shape)
+            #     print("lables",labels.shape)
+            #     ax[0].scatter(x=xy[:,0],y=xy[:,1],c=preds,label='pred u(x,y)')
+            #     ax[0].legend()
+            #     ax[0].set_title('Heatmap of u(x, y)')
+            #     ax[1].scatter(x=xy[:,0],y=xy[:,1], c=labels,label='true u(x,y)')
+            #     ax[1].legend()
+            #     ax[1].set_title('Heatmap of u(x, y)')
+            #
+            #     plt.title('Heatmap of u(x, y)')
+            #     plt.show()
             # if (epoch % 100 == 0):
             #     valid_loss=self._Valid(epoch=epoch)
             #     self._CheckPoint(epoch=epoch)

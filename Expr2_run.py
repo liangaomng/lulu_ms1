@@ -24,7 +24,7 @@ if __name__=="__main__":
                                        num_samples_circles,
                                        num_samples_ellipse)
 
-
+    args.expr_set_path="Expr2d/Expr_1.xlsx"
     # expr
     expr = PDE_Agent(
                       solver=poisson,

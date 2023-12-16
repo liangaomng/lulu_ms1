@@ -1,4 +1,20 @@
-SET: []
+SET:
+- Batch_size: 4
+  Boundary: 1100,550,400,400
+  Con_record: 0,2000,5000
+  Domain_Numbers: 2400
+  Epoch: 5200
+  Model: mscalenn2
+  Mu: 7
+  Note: note
+  PDE_Solver: src_lam/possion_domain.py
+  Penalty: 1000
+  SEED: 1
+  Save_Path: Result/Expr2_1
+  Scale_Coeff: 2,4,8,16,32
+  Sub_number: 1
+  Sum_Samples: 5000
+  lr: 0.001
 Subnet1:
 - Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
