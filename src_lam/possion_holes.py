@@ -1,7 +1,36 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import torch
+from torch.utils.data import TensorDataset
+class Produce_Data_set():  # 训练集，验证集，测试集 7:2:1
+    def __init__(self, name="holes"):
+        self._name=name
+
+    def produce_data(self, path,tensor):
+        self._num=tensor.shape[0]
+        # 文件夹
+        if not os.path.exists(path + f"{self._name}"):
+            os.makedirs(path + f"{self._name}")
+
+        tensor = torch.from_numpy(tensor).to(torch.float32)
+        # 划分数据集：训练集，验证集，测试集为 7:2:1
+        train_size = int(0.7 * self._num)
+        val_size = int(0.2 * self._num)
+
+        train_data=TensorDataset(tensor[:train_size,:,0:2],
+                                 tensor[:train_size,:,2:3])
+
+        val_data = TensorDataset(tensor[train_size:train_size + val_size,:,0:2],
+                                 tensor[train_size:train_size + val_size,:,2:3]) #input,label
+        test_data = TensorDataset(tensor[train_size + val_size:,:,0:2],
+                                  tensor[train_size + val_size:,:,2:3])
 
 
+        # 保存
+        torch.save(train_data, path + f"{self._name}"+ '/train_loader.pt')
+        torch.save(val_data, path + f"{self._name}" + '/val_loader.pt')
+        torch.save(test_data, path + f"{self._name}" + '/test_loader.pt')
 class PoissonEquationWithHoles:
     def __init__(self,
                  domain_size,
@@ -53,7 +82,6 @@ class PoissonEquationWithHoles:
         return x_samples, y_samples
     def sample_visualize(self):
         plt.figure(figsize=(8, 8))
-
         # 域边界采样点
         x_domain, y_domain = self.sample_domain_boundary()
         plt.scatter(x_domain, y_domain, label='Domain Boundary', color='black')
@@ -61,8 +89,7 @@ class PoissonEquationWithHoles:
         # 圆的采样点
         for i, (a, b, r) in enumerate(self.circle_params):
             x_circle, y_circle = self.sample_circle_boundary(a, b, r, self.num_samples_circles[i])
-
-
+            plt.scatter(x_circle, y_circle, label=f'Circle center=({a},{b}), r={r}')
         # 椭圆的采样点
         for h, k, a, b in self.ellipse_params:
             x_ellipse, y_ellipse = self.sample_ellipse_boundary(h, k, a, b, self.num_samples_ellipse)
@@ -145,6 +172,37 @@ class PoissonEquationWithHoles:
 
 
         return all_points_values_all
+    def plot_2dfrom_model(self,model,ax,title,cmap='bwr'):
+        '''
+        plot 2d figure from model
+        Args:
+            model: from AI model
+
+        Returns: ax
+
+        '''
+        # Generate grid for the domain
+        x = np.linspace(-self.domain_size, self.domain_size, 1000)
+        y = np.linspace(-self.domain_size, self.domain_size, 1000)
+        X, Y = np.meshgrid(x, y)
+
+        # Compute the solution for the entire domain
+        U = model(X, Y)
+        # Mask the holes (circles and ellipse)
+        for (center_x, center_y, radius) in self.circle_params:
+            mask = (X - center_x) ** 2 + (Y - center_y) ** 2 <= radius ** 2
+            U[mask] = 0  # Assign NaN to holes
+        # Mask the ellipse
+        h, k, a, b = self.ellipse_params[0]
+        ellipse_mask = (X - h) ** 2 / a ** 2 + (Y - k) ** 2 / b ** 2 <= 1
+        U[ellipse_mask] = 0  # Assign NaN to the elliptic hole
+        # Plot the contour of the solution, avoiding the holes
+        ax = ax.contourf(X, Y, U, levels=100, cmap=cmap)
+
+        ax.set_title(title)
+        ax.set_xlabel('x1')
+        ax.set_ylabel('x2')
+        return ax
 
 if __name__=="__main__":
 
@@ -166,9 +224,16 @@ if __name__=="__main__":
     poisson.plot_contour(mu=7*np.pi)
     #5000,3
     sampled_points_values = poisson.sample_exact_solution(mu=7*np.pi)
-    sample=poisson.sample(1)
-    print(sample)#[1,5000,3]
+    sample=poisson.sample(100) #采样1000次 [1000,5000,3]
+    dataset=Produce_Data_set()#生成数据集
+    dataset.produce_data(path="../data/possion_2d/",tensor=sample)
 
-    plt.scatter(sampled_points_values[:, 0], sampled_points_values[:, 1],
-                c=sampled_points_values[:, 2])
-    plt.show()
+
+    # plt.scatter(sampled_points_values[:, 0], sampled_points_values[:, 1],
+    #             c=sampled_points_values[:, 2])
+    # plt.show()
+    val=torch.load("../data/possion_2d/holes/val_loader.pt")
+    # 例子：检查 DataLoader 是否正确加载
+    for inputs, labels in val:
+        print(inputs.shape, labels.shape)
+        break  # 只打印第一批数据，然后跳出循环

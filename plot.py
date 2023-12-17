@@ -1,107 +1,168 @@
-import os
-import numpy as np
-import shutil
-
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
+from collections import deque
+
+# 根据行列数自动创建子图
+class Plot_Adaptive:
+    def __init__(self):
+        self.fig = None
+        self.axes = None
+    def _create_subplot_grid1(self,nrow, ncol):
+        self.fig = plt.figure(figsize=(1.6*ncol * 3, 1.4*nrow * 3))
+        gs = GridSpec(nrow, ncol, figure=self.fig,hspace=0.4,wspace=0.3)
+        self.axes = []
+
+        # 添加跨列的子图
+        for r in range(nrow - 1):
+            ax = self.fig.add_subplot(gs[r, :])
+            self.axes.append(ax)
+
+        # 添加最后一行的子图
+        for c in range(ncol):
+            ax = self.fig.add_subplot(gs[-1, c])
+            self.axes.append(ax)
+
+    def create_subplot_grid2(self,nrow, ncol):
+        self.fig = plt.figure(figsize=(1.6 * ncol * 3, 1.4 * nrow * 3))
+        gs = GridSpec(nrow, ncol, figure=self.fig, hspace=0.4, wspace=0.3)
+        self.axes = []
+
+        # 添加第2行的图
+        for r in [1]:
+            ax = self.fig.add_subplot(gs[r, :])
+            self.axes.append(ax)
+
+        # 添加最后一行的子图
+        for c in range(ncol):
+            ax = self.fig.add_subplot(gs[0, c])
+            ax = self.fig.add_subplot(gs[-1, c])
+            self.axes.append(ax)
+    def plot_1d(self,nrow,ncol,**kwagrs):
+        # 绘制一些示例数据
+        c_map=["Green","Blue","Purple"]
+        # 从kwagrs中获取参数
+        analyzer=kwagrs["analyzer"]
+        if self.fig is None:
+            self._create_subplot_grid1(nrow,ncol)
+        Record=kwagrs["contribution_record"]
+
+        for i, ax in enumerate(self.axes):
+
+            if i==0: #   第一张图
+                # 在第一个子图上绘制预测值的散点图
+                ax.cla()
+                x_test=kwagrs["x_test"]
+                pred=kwagrs["pred"]
+                y_true=kwagrs["y_true"]
+                avg_test_loss=kwagrs["avg_test_loss"]
+                epoch=kwagrs["epoch"]
+                ax.scatter(x_test, pred, label="Pred", color="red")
+                # 在第一个子图上绘制真实值的散点图
+                ax.scatter(x_test, y_true, label="True", color="blue")
+                # 设置第一个子图的图例、坐标轴标签和标题
+                ax.legend(loc="best", fontsize=16)
+                ax.set_xlabel('x', fontsize=16)
+                ax.set_ylabel('y', fontsize=16)
+                ax.get_xaxis().get_major_formatter().set_useOffset(False)
+                ax.tick_params(labelsize=16, width=2, colors='black')
+                ax.set_title("Test_MSE={:.6f}_Epoch{}".format(avg_test_loss, epoch))
+                ax.legend()
+            if i==1: #   第二张图
+                # 在第最后子图上绘制损失曲线
+                ax.cla()
+                loss_record_df=kwagrs["loss_record_df"]
+                ax.plot(loss_record_df["epoch"], loss_record_df["train_loss"], label="Train Loss", color="blue")
+                ax.plot(loss_record_df["epoch"], loss_record_df["valid_loss"], label="Valid Loss", color="red")
+                ax.plot(loss_record_df["epoch"], loss_record_df["test_loss"], label="Test Loss", color="green")
+
+                # 设置第二个子图的图例、坐标轴标签和标题
+                ax.set_yscale('log')  # 将y轴设置为对数尺度
+                ax.legend(loc="best", fontsize=16)
+                ax.set_xlabel('Epoch', fontsize=16)
+                ax.set_ylabel('Loss', fontsize=16)
+                ax.get_xaxis().get_major_formatter().set_useOffset(False)
+                ax.tick_params(labelsize=16, width=2, colors='black')
+                ax.set_title("Loss_Epoch{}".format(epoch))
+                # # 画三条虚线
+                for j,value in enumerate(Record):
+                    ax.axvline(x=value, color=c_map[j], linestyle='--')
+            if i==2: #   第三行图开始画贡献度
+                if (epoch == Record[0]):
+                    analyzer.plot_contributions(ax=self.axes[i],fig=self.fig,cmap=c_map[0])
+            if i==3:
+                if (epoch == Record[1]):
+                    analyzer.plot_contributions(ax=self.axes[i],fig=self.fig,cmap=c_map[1])
+            if i==4:
+                if (epoch == Record[2]):
+                    # for j in epoch_axv:
+                    analyzer.plot_contributions(ax=self.axes[i],fig=self.fig,cmap=c_map[2])
 
 
-import matplotlib.colors as mcolors
-print(mcolors.CSS4_COLORS['blue'])
+        return self.fig,self.axes
+    def plot_2d(self, nrow, ncol, **kwagrs):
+        # 绘制一些示例数据
+        c_map = ["Green", "Blue", "Purple"]
+        # 从kwagrs中获取参数
+        analyzer = kwagrs["analyzer"]
+        if self.fig is None:
+            self._create_subplot_grid2(nrow, ncol)
+        Record = kwagrs["contribution_record"]
 
-#colors = [\'#1f77b4\', \'#ff7f0e\', \'#2ca02c\', \'#d62728\', \'#9467bd\',   # 使用颜色编码定义颜色
-        #   \'#8c564b\', \'#e377c2\', \'#7f7f7f\', \'#bcbd22\', \'#17becf\']
-# dirname = '/Users/科研资料/Helmholtz方程/多尺度神经网络的研究/updates on MscaleDNN/所有选中实验/ex1.fitting-ok'
+        for i, ax in enumerate(self.axes):
 
-dirname = '/Users/liangaoming/Desktop/neural_study/lulu_ms/Result'
+            if i == 0:  # 第一行图
+                # 在第一个子图上绘制预测值的散点图
+                ax.cla()
+                x_test = kwagrs["x_test"] #5000,2
+                pred = kwagrs["pred"]#5000,1
+                y_true = kwagrs["y_true"]#5000,1
+                avg_test_loss = kwagrs["avg_test_loss"]
+                epoch = kwagrs["epoch"]
+                ax[0].scatter(x_test, pred, label="Pred", color="red")
+                # 在第一个子图上绘制真实值的散点图
+                ax[1].scatter(x_test, y_true, label="True", color="blue")
+                # 设置第一个子图的图例、坐标轴标签和标题
+                ax[0].legend(loc="best", fontsize=16)
+                ax.set_xlabel('x', fontsize=16)
+                ax.set_ylabel('y', fontsize=16)
+                ax.get_xaxis().get_major_formatter().set_useOffset(False)
+                ax.tick_params(labelsize=16, width=2, colors='black')
+                ax.set_title("Test_MSE={:.6f}_Epoch{}".format(avg_test_loss, epoch))
+                ax.legend()
+            if i == 1:  # 第二张图
+                # 在第最后子图上绘制损失曲线
+                ax.cla()
+                loss_record_df = kwagrs["loss_record_df"]
+                ax.plot(loss_record_df["epoch"], loss_record_df["train_loss"], label="Train Loss", color="blue")
+                ax.plot(loss_record_df["epoch"], loss_record_df["valid_loss"], label="Valid Loss", color="red")
+                ax.plot(loss_record_df["epoch"], loss_record_df["test_loss"], label="Test Loss", color="green")
 
-save_path = dirname + '/compare_fig'
-if not os.path.exists(save_path):
-    os.makedirs(save_path)
-mu = 70
+                # 设置第二个子图的图例、坐标轴标签和标题
+                ax.set_yscale('log')  # 将y轴设置为对数尺度
+                ax.legend(loc="best", fontsize=16)
+                ax.set_xlabel('Epoch', fontsize=16)
+                ax.set_ylabel('Loss', fontsize=16)
+                ax.get_xaxis().get_major_formatter().set_useOffset(False)
+                ax.tick_params(labelsize=16, width=2, colors='black')
+                ax.set_title("Loss_Epoch{}".format(epoch))
+                # # 画三条虚线
+                for j, value in enumerate(Record):
+                    ax.axvline(x=value, color=c_map[j], linestyle='--')
+            if i == 2:  # 第三行图开始画贡献度
+                if (epoch == Record[0]):
+                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[0])
+            if i == 3:
+                if (epoch == Record[1]):
+                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[1])
+            if i == 4:
+                if (epoch == Record[2]):
+                    # for j in epoch_axv:
+                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[2])
 
-for activation in ["phi" ]:
+        return self.fig, self.axes
 
-    for kernel_initializer in ["Glorot-normal" ]:
-            
-        # for model in ["mscalenn2" ,"mscalenn2-multi-alphai","mscalenn2-multi-alphai-ci"]:
-        loss_fnn = np.load('Result/fnn-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
-
-        loss_ms2 = np.load('Result/mscalenn2-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
-    
-        loss_ms2_alpha = np.load('Result/mscalenn2-multi-alphai-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
-        
-        loss_ms2_alpha_c = np.load('Result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/loss.npy'.format(mu,activation,kernel_initializer))
-
-
-        length = min(len(loss_fnn),len(loss_ms2),len(loss_ms2_alpha),len(loss_ms2_alpha_c))
-
-        fig ,ax = plt.subplots(figsize=(6, 4))
-        plt.semilogy(loss_fnn[0:length],label='fnn',color='#1f77b4')
-        
-        plt.semilogy(loss_ms2[0:length],label='ms2',color='#ff7f0e')
-        plt.semilogy(loss_ms2_alpha[0:length],label='ms2_' + r'$\alpha$',color='#2ca02c')
-        
-        # plt.semilogy(loss_ms2_alpha_c[0:length],label='ms2_'+ r'$\alpha$'+'_c',color='r')
-        # plt.semilogy(loss_ms2_alpha_rescale[0:length],label='ms2_' + r'$\alpha$' + '_rescale' )
-        # plt.semilogy(loss_ms2_alpha_c_rescale[0:length],label='ms2_' + r'$\alpha$' + '_c_rescale')
-        plt.title('loss-{}-{}'.format(activation,kernel_initializer),fontsize=15)
-        plt.legend(fontsize=15)
-        plt.yticks(size=15)#设置大小及加粗 #weight='bold' #fontproperties='Times New Roman',
-        plt.xticks(size=15)
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width*0.8 , box.height]) #图例放上面就box.height*0.8，放右边就box.width*0.8其它方式一样
-        ax.legend(loc='center left', bbox_to_anchor=(0.95,0.8),ncol=1)
-        plt.savefig(save_path+ '/loss-{}-{}.png'.format(activation,kernel_initializer))
-        plt.close(fig)
-
-
-        # mse_fnn = np.load('Result/fnn-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
-
-        mse_ms2 = np.load('Result/mscalenn2-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
-    
-        # mse_ms2_alpha = np.load('Result/mscalenn2-multi-alphai-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
-        #
-        # mse_ms2_alpha_c = np.load('Result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/mse.npy'.format(mu,activation,kernel_initializer))
-
-        # mse_ms2_alpha_rescale = np.load('./mscalenn2-multi-alphai-mu={}-{}-{}-rescaleout/mse.npy'.format(mu,activation,kernel_initializer))
-        
-        # mse_ms2_alpha_c_rescale = np.load('./mscalenn2-multi-alphai-ci-mu={}-{}-{}-rescaleout/mse.npy'.format(mu,activation,kernel_initializer))
-
-
-        #length = min(len(mse_fnn),len(mse_ms2),len(mse_ms2_alpha),len(mse_ms2_alpha_c))
-        length=4000
-        fig ,ax = plt.subplots(figsize=(6, 4))
-        #plt.semilogy(mse_fnn[0:length],label='fnn',color='#1f77b4')
-        
-        plt.semilogy(mse_ms2[0:length],label='ms2',color='#ff7f0e')
-        #plt.semilogy(mse_ms2_alpha[0:length],label='ms2_' + r'$\alpha$',color='#2ca02c')
-        
-        # plt.semilogy(mse_ms2_alpha_c[0:length],label='ms2_'+ r'$\alpha$'+'_c',color='r')
-        # plt.semilogy(mse_ms2_alpha_rescale[0:length],label='ms2_' + r'$\alpha$' + '_rescale' )
-        # plt.semilogy(mse_ms2_alpha_c_rescale[0:length],label='ms2_' + r'$\alpha$' + '_c_rescale')
-        plt.title('mse-{}-{}'.format(activation,kernel_initializer),fontsize=15)
-        plt.legend(fontsize=15)
-        plt.yticks( size=15)#设置大小及加粗 #weight='bold'
-        plt.xticks( size=15)
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width*0.8 , box.height]) #图例放上面就box.height*0.8，放右边就box.width*0.8其它方式一样
-        ax.legend(loc='center left', bbox_to_anchor=(0.95,0.8),ncol=1)
-        plt.savefig(save_path+ '/mse-{}-{}.png'.format(activation,kernel_initializer))
-        plt.close(fig)
-
-
-
-        # c = np.load('./Result/mscalenn2-multi-alphai-ci-mu={}-{}-{}/ci.npy'.format(mu,activation,kernel_initializer))
-        # plt.plot(c)
-        # plt.title('ci-{}-{}-rescaleout'.format(activation,kernel_initializer),fontsize=15)
-        # plt.yticks( size=15)#设置大小及加粗 #weight='bold'
-        # plt.xticks( size=15)
-        # plt.savefig(save_path + '/ci-{}-{}-rescaleout.png'.format(activation,kernel_initializer))
-        # plt.close()
-
-
-
-
-
-
-
+    # 使用示例
+if __name__ == '__main__':
+    Plot_Adaptive1= Plot_Adaptive()
+    Plot_Adaptive1.create_subplot_grid2(3, 3)  # 举例：3 行，4 列
+    plt.show()

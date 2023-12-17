@@ -87,6 +87,8 @@ class Multi_scale2_Args(Base_Args):
         self.Residual_Set_list = []
         self.Save_Path=None
         self.penalty=None
+        self.Boundary_samples=None
+        self.All_samples=None
     def Layer_set(self,layer_set:list)->list: #单子网络
         self.Layer_Set_list=layer_set #[1, 10, 10, 10, 1]
     def Act_set(self,act_list)->np.ndarray:
@@ -204,17 +206,13 @@ class Expr_Agent(Expr):
                             train_loss=None,
                             valid_loss=None,
                             test_loss=None):
-        # # 创建一个新记录的DataFrame
-
-
-
+        # 创建一个新记录的DataFrame
         new_record_df = pd.DataFrame({
             'epoch': [epoch],
             'train_loss': [train_loss],
             'valid_loss': [valid_loss],
             'test_loss': [test_loss]
         })
-        #
         # 如果文件不存在，则初始化一个空的DataFrame
         if not os.path.isfile(self.Save_Path):
             self.loss_record_df = pd.DataFrame(columns=['epoch',
@@ -305,7 +303,6 @@ class Expr_Agent(Expr):
         avg_test_loss = sum_test_loss / len(self._test_loader)
 
         # 画loss的值
-
         self._save4plot(epoch, avg_test_loss)
 
         print(f'Test Loss: {avg_test_loss:.6f}')
@@ -402,6 +399,7 @@ class PDE_Agent(Expr):
         self._Random(seed=self.args.seed)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.plot = Plot_Adaptive() # 画图
+        self.Save_Path = kwargs["Loss_Save_Path"]
         Excel2yaml(kwargs["Read_set_path"]).excel2yaml() #convert 2yaml
 
         self.Prepare_model()
@@ -434,6 +432,20 @@ class PDE_Agent(Expr):
                 use_residual= residual_en,
                 activation_set= np.array(activation_set)
             )
+        self._train_dataset = torch.load(self.args.Train_Dataset)
+        self._valid_dataset = torch.load(self.args.Valid_Dataset)
+        self._test_dataset = torch.load(self.args.Test_Dataset)
+
+        self._train_loader = DataLoader(    dataset=self._train_dataset,
+                                            batch_size=self.args.batch_size,
+                                            shuffle=True)
+
+        self._valid_loader = DataLoader(    dataset=self._valid_dataset,
+                                            batch_size=self.args.batch_size,
+                                            shuffle=True)
+        self._test_loader = DataLoader(    dataset=self._test_dataset ,
+                                           batch_size=self.args.batch_size,
+                                           shuffle=True)
 
     def _read_arg_xlsx(self,xls2_object:dict):
 
@@ -444,9 +456,15 @@ class PDE_Agent(Expr):
         args.epoch=int(xls2_object["SET"].Epoch[0])
         args.Save_Path=xls2_object["SET"].Save_Path[0]
         args.batch_size=int(xls2_object["SET"].Batch_size[0])
+        args.Valid_Dataset=xls2_object["SET"].Valid_Dataset[0]
+        args.Train_Dataset=xls2_object["SET"].Train_Dataset[0]
+        args.Test_Dataset=xls2_object["SET"].Test_Dataset[0]
         args.penalty=float(xls2_object["SET"].Penalty[0])
         args.Con_record=xls2_object["SET"].Con_record #list
         args.mu=xls2_object["SET"].Mu[0]
+        args.Boundary_samples=int(xls2_object["SET"].Sum_Samples[0]-\
+                                  xls2_object["SET"].Domain_Numbers[0])
+        args.All_samples=int(xls2_object["SET"].Sum_Samples[0])
 
         #  收集子网络的信息
         for i in range(int(args.subnets_number)):
@@ -463,91 +481,131 @@ class PDE_Agent(Expr):
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
         np.random.seed(seed)
+    def _update_loss_record(self, epoch,
+                            train_loss=None,
+                            valid_loss=None,
+                            test_loss=None):
+        # # 创建一个新记录的DataFrame
+        new_record_df = pd.DataFrame({
+            'epoch': [epoch],
+            'train_loss': [train_loss],
+            'valid_loss': [valid_loss],
+            'test_loss': [test_loss]
+        })
+        #
+        # 如果文件不存在，则初始化一个空的DataFrame
+        if not os.path.isfile(self.Save_Path):
+            self.loss_record_df = pd.DataFrame(columns=['epoch',
+                                                        'train_loss',
+                                                        'valid_loss',
+                                                        'test_loss'])
+            print("problem",flush=True)
 
+        # 否则，读取现有文件
+        else:
+            self.loss_record_df = pd.read_excel(self.Save_Path,
+                                                sheet_name="LossRecord")
+            print("no problem",flush=True)
+
+        # 将新记录追加到DataFrame中
+        self.loss_record_df = pd.concat([self.loss_record_df, new_record_df],
+                                        ignore_index=True).drop_duplicates(
+            subset=['epoch'])
+
+        try:
+            with pd.ExcelWriter(self.Save_Path, mode='w') as writer:
+                self.loss_record_df.to_excel(writer, sheet_name="LossRecord", index=False)
+                print("save successfully")
+        except Exception as e:
+            print("An error occurred:", e)
     def Train_PDE(self):
         self.model.train()
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.lr)
         criterion = nn.MSELoss()
         boundary_loss=nn.MSELoss()
+        start_b_index= self.args.All_samples-self.args.Boundary_samples #bondary index
         for epoch in range(self.args.epoch):
-            epoch_loss = 0.0
             #every epoch to sample in PDE_solver
-            data=self.solver.sample(batch=int(self.args.batch_size))
-            train_data=torch.from_numpy(data).float()
+            for inputs, labels in self._train_loader:
+                inputs = inputs.to(self.device)
+                labels = labels.to(self.device)
+                #predict
+                outputs = self.model(inputs)#[batch,5000,1]
+                boundary_pred=outputs[:,start_b_index:,0]
+                boundary_label =  labels[:,start_b_index:,0].to(self.device)
+                #assert  #[batch,2600]
+                assert boundary_pred.shape[-1] == self.args.Boundary_samples
+                #boundary loss
+                b_loss = self.args.penalty * boundary_loss(boundary_pred, boundary_label)
+                #domian loss
+                loss1=criterion(labels[:,:start_b_index,0], outputs[:,:start_b_index,0])
+                loss = loss1+b_loss
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                epoch_loss = loss.item()
 
-            inputs = train_data[:,:,0:2].to(self.device)
-            labels = train_data[:,:,2:3].to(self.device)
-            #预测
-            outputs = self.model(inputs)
+            aver_loss=epoch_loss/len(self._train_loader)
+            print("epoch:{},aver_loss:{:.6f}".format(epoch,aver_loss),flush=True)
 
-            boundary_pred=outputs[:,2600:,0]
-            boundary_label =  labels[:,2600:,0].to(self.device)
-
-
-            b_loss = self.args.penalty * boundary_loss(boundary_pred, boundary_label)
-
-            loss1=criterion(labels[:,0:2400,0], outputs[:,0:2400,0])
-
-            loss = loss1+b_loss
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            epoch_loss = loss.item()
-            print(f"{epoch}_loss",epoch_loss)
-            # #画网格
-            # if (epoch % 100 == 0):
-            #     #self.solver.plot_contour(mu=7*np.pi)#真实解
-            #     fig,ax=plt.subplots(1,2,figsize=(10,5))
-            #     # x=torch.linspace(-1,1,1000)
-            #     # y=torch.linspace(-1,1,1000)
-            #     # 创建一个新的二维张量，其中每行包含来自x和y的相应元素
-            #     # x, y = torch.meshgrid(x, y)
-            #     # xy = torch.stack([x, y], dim=2).reshape(1,-1, 2)
-            #     #
-            #     # xy=xy.to(self.device)
-            #     # u=self.model(xy) #(1,1000,2)
-            #     # u=u.cpu().detach().numpy() #[]
-            #     # u=u.reshape(1000,1000)
-            #     labels=labels[0,:].cpu().detach().numpy()
-            #     preds=outputs[0,:].cpu().detach().numpy()
-            #     xy=inputs[0,:,0:2].cpu().detach().numpy()
-            #     print("xy",xy.shape)
-            #     print("lables",labels.shape)
-            #     ax[0].scatter(x=xy[:,0],y=xy[:,1],c=preds,label='pred u(x,y)')
-            #     ax[0].legend()
-            #     ax[0].set_title('Heatmap of u(x, y)')
-            #     ax[1].scatter(x=xy[:,0],y=xy[:,1], c=labels,label='true u(x,y)')
-            #     ax[1].legend()
-            #     ax[1].set_title('Heatmap of u(x, y)')
-            #
-            #     plt.title('Heatmap of u(x, y)')
-            #     plt.show()
-            # if (epoch % 100 == 0):
-            #     valid_loss=self._Valid(epoch=epoch)
-            #     self._CheckPoint(epoch=epoch)
-            #     test_loss =self._Test4Save(epoch=epoch)
-            #     self._update_loss_record(epoch, train_loss=aver_loss, valid_loss=valid_loss, test_loss=test_loss)
+            if (epoch % 100 == 0):
+                valid_loss=self._Valid(epoch=epoch)
+                self._CheckPoint(epoch=epoch)
+                test_loss =self._Test4Save(epoch=epoch)
+                self._update_loss_record(epoch,
+                                         train_loss=aver_loss,
+                                         valid_loss=valid_loss,
+                                         test_loss=test_loss)
     def _Valid(self,epoch):
         self.model.eval()
         valid_loss = 0.0
         criterion = nn.MSELoss()
+
         for inputs, labels in self._valid_loader:
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
             outputs = self.model(inputs)
             loss = criterion(outputs, labels)
             valid_loss += loss.item()
-        aver_loss = valid_loss / len(self._valid_loader)
+        aver_loss = valid_loss / len(self._test_loader)
         print('epoch: {}, valid loss: {:.6f}'.format(epoch, aver_loss))
         return aver_loss
-    def _update_loss_record(self,epoch,**kwargs):
-        train_loss=kwargs["train_loss"]
-        valid_loss=kwargs["valid_loss"]
-        test_loss=kwargs["test_loss"]
-        self.args.train_loss_record.append(train_loss)
-        self.args.valid_loss_record.append(valid_loss)
-        self.args.test_loss_record.append(test_loss)
-        self.args.epoch_record.append(epoch)
+    def _update_loss_record(self, epoch,
+                            train_loss=None,
+                            valid_loss=None,
+                            test_loss=None):
+        # # 创建一个新记录的DataFrame
+        new_record_df = pd.DataFrame({
+            'epoch': [epoch],
+            'train_loss': [train_loss],
+            'valid_loss': [valid_loss],
+            'test_loss': [test_loss]
+        })
+        # 如果文件不存在，则初始化一个空的DataFrame
+        if not os.path.isfile(self.Save_Path):
+            self.loss_record_df = pd.DataFrame(columns=['epoch',
+                                                        'train_loss',
+                                                        'valid_loss',
+                                                        'test_loss'])
+            print("problem",flush=True)
+
+        # 否则，读取现有文件
+        else:
+            self.loss_record_df = pd.read_excel(self.Save_Path,
+                                                sheet_name="LossRecord")
+            print("no problem",flush=True)
+
+        # 将新记录追加到DataFrame中
+        self.loss_record_df = pd.concat([self.loss_record_df, new_record_df],
+                                        ignore_index=True).drop_duplicates(
+            subset=['epoch'])
+
+        try:
+            with pd.ExcelWriter(self.Save_Path, mode='a',if_sheet_exists='replace') as writer:
+                self.loss_record_df.to_excel(writer, sheet_name="LossRecord", index=False)
+                print("save successfully")
+        except Exception as e:
+            print("An error occurred:", e)
     def _Test4Save(self,epoch):
         self.model.eval()
         test_loss = 0.0
@@ -558,12 +616,15 @@ class PDE_Agent(Expr):
             outputs = self.model(inputs)
             loss = criterion(outputs, labels)
             test_loss += loss.item()
-        aver_loss = test_loss / len(self._test_loader)
-        print('epoch: {}, test loss: {:.6f}'.format(epoch, aver_loss))
-        return aver_loss
+        aver_test_loss = test_loss / len(self._test_loader)
+        print('epoch: {}, test loss: {:.6f}'.format(epoch, aver_test_loss))
+
+        # 画loss的值
+        self._save4plot(epoch, avg_test_loss=aver_test_loss)
+        return aver_test_loss
     def _CheckPoint(self,**kwargs):
-        epoch=kwargs["epoch"]
-        dir_name=self.args.Save_Path+"/"+self.args.model+".pth"
+        epoch = kwargs["epoch"]
+        dir_name = self.args.Save_Path + "/" + self.args.model + ".pth"
         if os.path.exists(self.args.Save_Path):
             pass
         else:
@@ -571,6 +632,45 @@ class PDE_Agent(Expr):
 
         torch.save(self.model.state_dict(), dir_name)
         print(f"save model at epoch {epoch}")
+    def _save4plot(self, epoch, avg_test_loss):
+        # 创建两个子图，上下布局
+        avg_test_loss = avg_test_loss
+        # 加载测试数据集
+        test_data = torch.load(self.args.Test_Dataset)
+
+        # 将TensorDataset转换为numpy数组
+        x_test = test_data.tensors[0,:,:].numpy() # [5000,2]
+        U_true = test_data.tensors[1,:,:].numpy()#[5000,1]
+
+        # analyzer
+        analyzer = Analyzer4scale(model=self.model,
+                                  scale_coeffs=self.args.Scale_Coeff)
+        # 读取损失记录
+        loss_record_df = pd.read_excel(self.Save_Path, sheet_name="LossRecord")
+        # 获取模型预测
+        pred = self.model(torch.from_numpy(x_test).float().to(self.device)).detach().cpu().numpy()
+
+        if x_test.shape[1] == 2:
+            # 画图
+            fig, axes = self.plot.plot_2d(nrow=3,
+                                          ncol=3,
+                                          loss_record_df=loss_record_df,
+                                          analyzer=analyzer,
+                                          x_test=x_test,
+                                          u_true=U_true,
+                                          pred=pred,
+                                          epoch=epoch,
+                                          avg_test_loss=avg_test_loss,
+                                          contribution_record=self.args.Con_record,
+                                          solver=self.solver,
+                                          model=self.model)
+
+        # 保存整个图表
+        fig.savefig('{}/combined_loss_{}.png'.format(self.args.Save_Path, epoch),
+                    bbox_inches='tight', format='png')
+        # # 关闭图表以释放内存
+        if epoch == self.args.epoch:
+            plt.close(fig)
     def Do_Expr(self):
         self.Train_PDE()
         print("we have done the expr")

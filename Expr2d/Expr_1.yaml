@@ -1,6 +1,6 @@
 SET:
-- Batch_size: 4
-  Boundary: 1100,550,400,400
+- Batch_size: 1
+  Boundary: 1100,550,550,400
   Con_record: 0,2000,5000
   Domain_Numbers: 2400
   Epoch: 5200
@@ -11,10 +11,13 @@ SET:
   Penalty: 1000
   SEED: 1
   Save_Path: Result/Expr2_1
-  Scale_Coeff: 2,4,8,16,32
+  Scale_Coeff: 1,4,8,16,32
   Sub_number: 1
   Sum_Samples: 5000
-  lr: 0.001
+  Test_Dataset: data/possion_2d/holes/test_loader.pt
+  Train_Dataset: data/possion_2d/holes/train_loader.pt
+  Valid_Dataset: data/possion_2d/holes/val_loader.pt
+  lr: 0.0001
 Subnet1:
 - Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform

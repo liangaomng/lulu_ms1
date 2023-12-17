@@ -19,7 +19,6 @@ class Single_MLP(nn.Module):
         layer_width=layer_set[1]
         print(len(kwargs["activation_set"]))
         assert len(kwargs["activation_set"])==layer_depth -1 #激活比linear 少一个
-
         # 构建网络层
         for i in range(layer_depth):
             #输入
