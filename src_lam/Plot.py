@@ -24,19 +24,20 @@ class Plot_Adaptive:
             ax = self.fig.add_subplot(gs[-1, c])
             self.axes.append(ax)
 
-    def create_subplot_grid2(self,nrow, ncol):
+    def _create_subplot_grid2(self,nrow, ncol):
         self.fig = plt.figure(figsize=(1.6 * ncol * 3, 1.4 * nrow * 3))
         gs = GridSpec(nrow, ncol, figure=self.fig, hspace=0.4, wspace=0.3)
         self.axes = []
 
-        # 添加跨列的子图
-        for r in range(nrow - 1):
+        for c in range(ncol):
+            ax = self.fig.add_subplot(gs[0, c])
+            self.axes.append(ax)
+
+        # 添加第2行的图
+        for r in [1]:
             ax = self.fig.add_subplot(gs[r, :])
             self.axes.append(ax)
-        # 添加 第一行的子图
-        for c in range(0):
-            ax = self.fig.add_subplot(gs[0, 2])
-            self.axes.append(ax)
+
         # 添加最后一行的子图
         for c in range(ncol):
             ax = self.fig.add_subplot(gs[-1, c])
@@ -119,36 +120,28 @@ class Plot_Adaptive:
 
             if i == 2:  # 第一张图
                 # 在第一个子图上绘制预测值的散点图
-                ax.cla()
-                x_test = kwagrs["x_test"]
-                pred = kwagrs["pred"]
                 avg_test_loss = kwagrs["avg_test_loss"]
                 epoch = kwagrs["epoch"]
                 # 在第一个子图上绘制真实值的散点图
-                ax[0]=solver.plot_2dfrom_model(ax=ax[0],
+                U_pred=solver.plot_2dfrom_model(ax=self.axes[0],
                                                model=model,
                                                title="Pred",
                                                cmap="bwr")
-                u_true = kwagrs["u_true"]
+
                 # 在第一个子图上绘制真实值的散点图
-                ax[1]=solver.plot_2d(ax=ax[1],
-                                     x_test=x_test,
-                                     y_pred=pred,
-                                     title="true",
-                                     cmap="bwr")
-                ax[2]=solver.plot_2d(
-                                    ax=ax[0],
-                                    x_test=x_test,
-                                    y_pred=pred,
-                                    title="Pred", cmap="bwr")
+                U_true=solver.plot_2dfrom_model(ax=self.axes[1],
+                                               model=None,
+                                               title="True",
+                                               cmap="bwr")
+                self.axes[2].imshow((np.abs(U_pred-U_true)),
+                                    cmap="bwr",vmin=-1,vmax=1,origin="lower")
+                # 隐藏 x 和 y 轴的刻度和标签
+                self.axes[2].set_xticks([])
+                self.axes[2].set_yticks([])
                 # 设置第一个子图的图例、坐标轴标签和标题
-                ax.legend(loc="best", fontsize=16)
-                ax.set_xlabel('x', fontsize=16)
-                ax.set_ylabel('y', fontsize=16)
-                ax.get_xaxis().get_major_formatter().set_useOffset(False)
-                ax.tick_params(labelsize=16, width=2, colors='black')
-                ax.set_title("Test_MSE={:.6f}_Epoch{}".format(avg_test_loss, epoch))
-                ax.legend()
+                self.axes[2].set_title("Test_MSE={:.6f}_Epoch{}".format(avg_test_loss, epoch))
+
+
             if i == 3:  # 第二张图
                 # 在第最后子图上绘制损失曲线
                 ax.cla()

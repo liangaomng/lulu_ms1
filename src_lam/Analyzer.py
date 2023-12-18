@@ -15,16 +15,21 @@ class Analyzer():
     def plot_contributions(self):
         pass
 class Analyzer4scale(Analyzer):
-    def __init__(self,model,**kwagrs):
+    def __init__(self,model,d,**kwagrs):
         super().__init__(model,**kwagrs)
         self.contributions=None
         self.scale_coeffs=kwagrs["scale_coeffs"]
+        if d==1:
+            self.input_tensor=torch.tensor([[1]])
+        elif d==2:
+            self.input_tensor=torch.tensor([[1,1]])
 
-    def _analyze_scales(self, input_tensor= torch.tensor([[1]]),
+    def _analyze_scales(self,
                        baseline=-1,
                        n_steps=1000,
                        target=0)->list:
         scales_contribution = []
+        input_tensor=self.input_tensor
         device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         input_tensor=input_tensor.float().to(device)
         for i, scale in enumerate(self.model.Multi_scale):

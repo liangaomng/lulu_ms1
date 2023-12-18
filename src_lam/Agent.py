@@ -318,7 +318,7 @@ class Expr_Agent(Expr):
         y_true = test_data.tensors[1].numpy()
 
         #analyzer
-        analyzer=Analyzer4scale(model=self.model,
+        analyzer=Analyzer4scale(model=self.model,d=1,
                                 scale_coeffs=self.args.Scale_Coeff)
         # 读取损失记录
         loss_record_df = pd.read_excel(self.Save_Path, sheet_name=self.loss_record_sheet)
@@ -548,7 +548,7 @@ class PDE_Agent(Expr):
             aver_loss=epoch_loss/len(self._train_loader)
             print("epoch:{},aver_loss:{:.6f}".format(epoch,aver_loss),flush=True)
 
-            if (epoch % 100 == 0):
+            if (epoch % 10 == 0):
                 valid_loss=self._Valid(epoch=epoch)
                 self._CheckPoint(epoch=epoch)
                 test_loss =self._Test4Save(epoch=epoch)
@@ -566,7 +566,7 @@ class PDE_Agent(Expr):
             labels = labels.to(self.device)
             outputs = self.model(inputs)
             loss = criterion(outputs, labels)
-            valid_loss += loss.item()
+            valid_loss = loss.item()
         aver_loss = valid_loss / len(self._test_loader)
         print('epoch: {}, valid loss: {:.6f}'.format(epoch, aver_loss))
         return aver_loss
@@ -637,13 +637,16 @@ class PDE_Agent(Expr):
         avg_test_loss = avg_test_loss
         # 加载测试数据集
         test_data = torch.load(self.args.Test_Dataset)
+        xy=test_data[0][0]
+        pred=test_data[0][1]
 
         # 将TensorDataset转换为numpy数组
-        x_test = test_data.tensors[0,:,:].numpy() # [5000,2]
-        U_true = test_data.tensors[1,:,:].numpy()#[5000,1]
+        x_test = xy.numpy() # [5000,2]
+        U_true = pred.numpy()#[5000,1]
 
         # analyzer
         analyzer = Analyzer4scale(model=self.model,
+                                  d=2,
                                   scale_coeffs=self.args.Scale_Coeff)
         # 读取损失记录
         loss_record_df = pd.read_excel(self.Save_Path, sheet_name="LossRecord")
@@ -656,7 +659,6 @@ class PDE_Agent(Expr):
                                           ncol=3,
                                           loss_record_df=loss_record_df,
                                           analyzer=analyzer,
-                                          x_test=x_test,
                                           u_true=U_true,
                                           pred=pred,
                                           epoch=epoch,

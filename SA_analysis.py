@@ -28,7 +28,7 @@ class ModelAnalyzer:
         print("实验的sacles",expr.args.Scale_Coeff)
         return expr.model, expr.args.Scale_Coeff
 
-    def _analyze_scales(self, input_tensor= torch.tensor([[1]]),
+    def _analyze_scales(self, input_tensor= torch.tensor([1]),
                        baseline=-1,
                        n_steps=1000,
                        target=0):
@@ -69,8 +69,8 @@ class ModelAnalyzer:
 
 if __name__== "__main__":
     # 使用示例
-    model_path = "/Users/liangaoming/Desktop/neural_study/lulu_ms/Result/Expr1_3/mscalenn2.pth"
-    read_set_path = "Expr1d/Expr_3.xlsx"
+    model_path = "/Users/liangaoming/Desktop/neural_study/lulu_ms/Result/Expr2_1/mscalenn2.pth"
+    read_set_path = "Expr2d/Expr_1.xlsx"
 
     analyzer = ModelAnalyzer(model_path, read_set_path)
 

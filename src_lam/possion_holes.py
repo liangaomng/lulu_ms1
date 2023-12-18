@@ -182,27 +182,35 @@ class PoissonEquationWithHoles:
 
         '''
         # Generate grid for the domain
-        x = np.linspace(-self.domain_size, self.domain_size, 1000)
-        y = np.linspace(-self.domain_size, self.domain_size, 1000)
+        x = np.linspace(-self.domain_size, self.domain_size, 200)
+        y = np.linspace(-self.domain_size, self.domain_size, 200)
         X, Y = np.meshgrid(x, y)
 
         # Compute the solution for the entire domain
-        U = model(X, Y)
+        if model is None:
+            U = self.exact_solution(X, Y, mu=7*np.pi)
+        else:
+            device= torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            XY_combined = np.dstack((X, Y))
+            # 重塑数组为 (10000, 2)
+            XY_reshaped = XY_combined.reshape(-1, 2)
+            XY_reshaped = torch.from_numpy(XY_reshaped).float().to(device)
+            U = model(XY_reshaped).cpu().detach().numpy()
+            U= U.reshape(200, 200)
         # Mask the holes (circles and ellipse)
         for (center_x, center_y, radius) in self.circle_params:
             mask = (X - center_x) ** 2 + (Y - center_y) ** 2 <= radius ** 2
-            U[mask] = 0  # Assign NaN to holes
+            U[mask] = np.nan # Assign NaN to holes
         # Mask the ellipse
         h, k, a, b = self.ellipse_params[0]
         ellipse_mask = (X - h) ** 2 / a ** 2 + (Y - k) ** 2 / b ** 2 <= 1
-        U[ellipse_mask] = 0  # Assign NaN to the elliptic hole
+        U[ellipse_mask] = np.nan  # Assign NaN to the elliptic hole
         # Plot the contour of the solution, avoiding the holes
-        ax = ax.contourf(X, Y, U, levels=100, cmap=cmap)
-
         ax.set_title(title)
         ax.set_xlabel('x1')
         ax.set_ylabel('x2')
-        return ax
+        ax.contourf(X, Y, U, levels=200, cmap=cmap)
+        return U
 
 if __name__=="__main__":
 

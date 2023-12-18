@@ -1,5 +1,5 @@
 SET:
-- Batch_size: 1
+- Batch_size: 32
   Boundary: 1100,550,550,400
   Con_record: 0,2000,5000
   Domain_Numbers: 2400
