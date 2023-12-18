@@ -80,17 +80,33 @@ class Plot_Adaptive:
                 ax.plot(loss_record_df["epoch"], loss_record_df["valid_loss"], label="Valid Loss", color="red")
                 ax.plot(loss_record_df["epoch"], loss_record_df["test_loss"], label="Test Loss", color="green")
 
+                # # 画三条虚线
+                if epoch >=100:
+                    for j,value in enumerate(Record):
+                        ax.axvline(x=value, color=c_map[j], linestyle='--')
+                    for loss_type in ['valid_loss']:
+                        min_loss = np.min(loss_record_df[loss_type])
+                        print(loss_record_df[loss_type])
+                        min_epoch = loss_record_df[loss_record_df[loss_type] == min_loss]["epoch"].values[0]
+                        ax.axhline(y=min_loss, xmax=min_epoch,color='black', linestyle=':')
+                        # 在最小损失点做标记
+                        ax.plot(min_epoch,min_loss, '*',
+                                color='black',markersize=18,
+                                label=f"valid_{min_loss:.1e}")  # 使用黑色圆点做标记
+                        # 假设已经计算出min_loss，将其添加到Y轴的刻度标签中
+                        extra_ticks = ax.get_yticks().tolist() + [min_loss]
+                        ax.set_yticks(extra_ticks)
+                        # 设置刻度标签，确保最小损失值的标签使用科学记数法
+                        ax.axvline(x=min_epoch,ymin=1e-10,ymax=min_loss ,linestyle='--')
+                ax.legend(loc="best", fontsize=16)
                 # 设置第二个子图的图例、坐标轴标签和标题
                 ax.set_yscale('log')  # 将y轴设置为对数尺度
-                ax.legend(loc="best", fontsize=16)
                 ax.set_xlabel('Epoch', fontsize=16)
                 ax.set_ylabel('Loss', fontsize=16)
                 ax.get_xaxis().get_major_formatter().set_useOffset(False)
                 ax.tick_params(labelsize=16, width=2, colors='black')
                 ax.set_title("Loss_Epoch{}".format(epoch))
-                # # 画三条虚线
-                for j,value in enumerate(Record):
-                    ax.axvline(x=value, color=c_map[j], linestyle='--')
+
             if i==2: #   第三行图开始画贡献度
                 if (epoch == Record[0]):
                     analyzer.plot_contributions(ax=self.axes[i],fig=self.fig,cmap=c_map[0])
@@ -150,17 +166,33 @@ class Plot_Adaptive:
                 ax.plot(loss_record_df["epoch"], loss_record_df["valid_loss"], label="Valid Loss", color="red")
                 ax.plot(loss_record_df["epoch"], loss_record_df["test_loss"], label="Test Loss", color="green")
 
+                # # 画三条虚线
+                if epoch >= 100:
+                    for j, value in enumerate(Record):
+                        ax.axvline(x=value, color=c_map[j], linestyle='--')
+                    for loss_type in ['valid_loss']:
+                        min_loss = np.min(loss_record_df[loss_type])
+                        print(loss_record_df[loss_type])
+                        min_epoch = loss_record_df[loss_record_df[loss_type] == min_loss]["epoch"].values[0]
+                        ax.axhline(y=min_loss, xmax=min_epoch, color='black', linestyle=':')
+                        # 在最小损失点做标记
+                        ax.plot(min_epoch, min_loss, '*',
+                                color='black', markersize=18,
+                                label=f"valid_{min_loss:.1e}")  # 使用黑色圆点做标记
+                        # 假设已经计算出min_loss，将其添加到Y轴的刻度标签中
+                        extra_ticks = ax.get_yticks().tolist() + [min_loss]
+                        ax.set_yticks(extra_ticks)
+
+                        # 设置刻度标签，确保最小损失值的标签使用科学记数法
+                        ax.axvline(x=min_epoch, ymin=1e-10, ymax=min_loss, linestyle='--')
+                ax.legend(loc="best", fontsize=16)
                 # 设置第二个子图的图例、坐标轴标签和标题
                 ax.set_yscale('log')  # 将y轴设置为对数尺度
-                ax.legend(loc="best", fontsize=16)
                 ax.set_xlabel('Epoch', fontsize=16)
                 ax.set_ylabel('Loss', fontsize=16)
                 ax.get_xaxis().get_major_formatter().set_useOffset(False)
                 ax.tick_params(labelsize=16, width=2, colors='black')
                 ax.set_title("Loss_Epoch{}".format(epoch))
-                # # 画三条虚线
-                for j, value in enumerate(Record):
-                    ax.axvline(x=value, color=c_map[j], linestyle='--')
             if i == 4:  # 第三行图开始画贡献度
                 if (epoch == Record[0]):
                     analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[0])

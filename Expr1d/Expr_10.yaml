@@ -1,13 +1,13 @@
 SET:
-- Batch_size: 256.0
+- Batch_size: 256
   Con_record: 0,2000,5000
-  Epoch: 5100.0
+  Epoch: 5100
   Model: mscalenn2
   Note: note
-  SEED: 1.0
+  SEED: 1
   Save_Path: Result/Expr1_10
   Scale_Coeff: 1,2,4,8,16,32
-  Sub_number: 6.0
+  Sub_number: 6
   Test_Dataset: data/freq_1d/mu_70/test_loader.pt
   Train_Dataset: data/freq_1d/mu_70/train_loader.pt
   Valid_Dataset: data/freq_1d/mu_70/val_loader.pt
@@ -16,29 +16,29 @@ Subnet1:
 - Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
   Layer_Set: 1,150,150,150,1
-  Residual: false
+  Residual: true
 Subnet2:
 - Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
   Layer_Set: 1,150,150,150,1
-  Residual: false
+  Residual: true
 Subnet3:
 - Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
   Layer_Set: 1,150,150,150,1
-  Residual: false
+  Residual: true
 Subnet4:
 - Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
   Layer_Set: 1,150,150,150,1
-  Residual: false
+  Residual: true
 Subnet5:
 - Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
   Layer_Set: 1,150,150,150,1
-  Residual: false
+  Residual: true
 Subnet6:
 - Act_Set: phi,phi,phi
   Ini_Set: xavier_uniform
   Layer_Set: 1,150,150,150,1
-  Residual: false
+  Residual: true

@@ -1,168 +1,122 @@
+# Importing required libraries
+import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-from collections import deque
 
-# 根据行列数自动创建子图
-class Plot_Adaptive:
-    def __init__(self):
-        self.fig = None
-        self.axes = None
-    def _create_subplot_grid1(self,nrow, ncol):
-        self.fig = plt.figure(figsize=(1.6*ncol * 3, 1.4*nrow * 3))
-        gs = GridSpec(nrow, ncol, figure=self.fig,hspace=0.4,wspace=0.3)
-        self.axes = []
+class Msdnn2():
+    def __init__(self, subs_number):
+        self.subs_number = subs_number
+        self.layer_sizes = [2, 3, 3, 3, 1]
+        self.node_positions = {}
+        self.final_2 = None  # 倒数第二层的4个节点
+        self.calculate_positions()
+        self.final=[subs_number,1] #4 is the number of scales and 1 is the number of nodes in the final layer
 
-        # 添加跨列的子图
-        for r in range(nrow - 1):
-            ax = self.fig.add_subplot(gs[r, :])
-            self.axes.append(ax)
+    def calculate_positions(self):
+        """
+        Calculates the positions of each neuron in each layer and scale adaptively.
+        """
 
-        # 添加最后一行的子图
-        for c in range(ncol):
-            ax = self.fig.add_subplot(gs[-1, c])
-            self.axes.append(ax)
+        # Determine the vertical space needed by the largest layer
+        max_layer_size = max(self.layer_sizes)
+        layer_height = 20 / max_layer_size  # Adaptive height based on the largest layer
 
-    def create_subplot_grid2(self,nrow, ncol):
-        self.fig = plt.figure(figsize=(1.6 * ncol * 3, 1.4 * nrow * 3))
-        gs = GridSpec(nrow, ncol, figure=self.fig, hspace=0.4, wspace=0.3)
-        self.axes = []
+        # Determine the spacing between scales adaptively
+        scale_spacing = 80.0 / self.subs_number
 
-        # 添加第2行的图
-        for r in [1]:
-            ax = self.fig.add_subplot(gs[r, :])
-            self.axes.append(ax)
+        # Calculate positions for each layer and scale
+        for sub in range(self.subs_number):
+            for layer_idx, size in enumerate(self.layer_sizes):
+                positions = self.layer_positions(size, layer_idx, layer_height, scale_spacing * sub)
+                self.node_positions[f'scale{sub + 1}_layer{layer_idx}'] = positions
+        # Calculate the positions of the second-to-last layer and final node adaptively
+        self.final_2 = np.array([[self.subs_number, scale_spacing * sub] for sub in range(self.subs_number)])
+        positions = np.array([[len(self.layer_sizes) + 1.0, scale_spacing * (self.subs_number -2.5)]])
+        print(positions)
+        self.node_positions['final_out'] = positions
 
-        # 添加最后一行的子图
-        for c in range(ncol):
-            ax = self.fig.add_subplot(gs[0, c])
-            ax = self.fig.add_subplot(gs[-1, c])
-            self.axes.append(ax)
-    def plot_1d(self,nrow,ncol,**kwagrs):
-        # 绘制一些示例数据
-        c_map=["Green","Blue","Purple"]
-        # 从kwagrs中获取参数
-        analyzer=kwagrs["analyzer"]
-        if self.fig is None:
-            self._create_subplot_grid1(nrow,ncol)
-        Record=kwagrs["contribution_record"]
+    def layer_positions(self, n_nodes, layer_idx, max_height,scale_index):
+        """
+        Calculate the positions for a layer of nodes.
+        """
+        if n_nodes == 1:
+            return np.array([[layer_idx, scale_index]])
+        else:
+            return np.column_stack((np.full(n_nodes, layer_idx), scale_index+np.linspace(-max_height , max_height, n_nodes)))
 
-        for i, ax in enumerate(self.axes):
+    def draw_connections_with_activation(self, layer1_positions, layer2_positions, ax):
+        """
+        Draws connections between two layers.
+        """
 
-            if i==0: #   第一张图
-                # 在第一个子图上绘制预测值的散点图
-                ax.cla()
-                x_test=kwagrs["x_test"]
-                pred=kwagrs["pred"]
-                y_true=kwagrs["y_true"]
-                avg_test_loss=kwagrs["avg_test_loss"]
-                epoch=kwagrs["epoch"]
-                ax.scatter(x_test, pred, label="Pred", color="red")
-                # 在第一个子图上绘制真实值的散点图
-                ax.scatter(x_test, y_true, label="True", color="blue")
-                # 设置第一个子图的图例、坐标轴标签和标题
-                ax.legend(loc="best", fontsize=16)
-                ax.set_xlabel('x', fontsize=16)
-                ax.set_ylabel('y', fontsize=16)
-                ax.get_xaxis().get_major_formatter().set_useOffset(False)
-                ax.tick_params(labelsize=16, width=2, colors='black')
-                ax.set_title("Test_MSE={:.6f}_Epoch{}".format(avg_test_loss, epoch))
-                ax.legend()
-            if i==1: #   第二张图
-                # 在第最后子图上绘制损失曲线
-                ax.cla()
-                loss_record_df=kwagrs["loss_record_df"]
-                ax.plot(loss_record_df["epoch"], loss_record_df["train_loss"], label="Train Loss", color="blue")
-                ax.plot(loss_record_df["epoch"], loss_record_df["valid_loss"], label="Valid Loss", color="red")
-                ax.plot(loss_record_df["epoch"], loss_record_df["test_loss"], label="Test Loss", color="green")
+        for i, pos1 in enumerate(layer1_positions):
+            for j, pos2 in enumerate(layer2_positions):
+                weight = 0  # Since weights are initialized to 0
+                arrow_props = dict(arrowstyle="-",color='blue', alpha=0.75, lw=2)
 
-                # 设置第二个子图的图例、坐标轴标签和标题
-                ax.set_yscale('log')  # 将y轴设置为对数尺度
-                ax.legend(loc="best", fontsize=16)
-                ax.set_xlabel('Epoch', fontsize=16)
-                ax.set_ylabel('Loss', fontsize=16)
-                ax.get_xaxis().get_major_formatter().set_useOffset(False)
-                ax.tick_params(labelsize=16, width=2, colors='black')
-                ax.set_title("Loss_Epoch{}".format(epoch))
-                # # 画三条虚线
-                for j,value in enumerate(Record):
-                    ax.axvline(x=value, color=c_map[j], linestyle='--')
-            if i==2: #   第三行图开始画贡献度
-                if (epoch == Record[0]):
-                    analyzer.plot_contributions(ax=self.axes[i],fig=self.fig,cmap=c_map[0])
-            if i==3:
-                if (epoch == Record[1]):
-                    analyzer.plot_contributions(ax=self.axes[i],fig=self.fig,cmap=c_map[1])
-            if i==4:
-                if (epoch == Record[2]):
-                    # for j in epoch_axv:
-                    analyzer.plot_contributions(ax=self.axes[i],fig=self.fig,cmap=c_map[2])
+                ax.annotate("", xy=pos2, xytext=pos1, arrowprops=arrow_props)
+
+    def draw_nodes(self, ax):
+        """
+        Draws the nodes on the given axes.
+        """
+        for key, positions in self.node_positions.items():
+
+            for pos in positions:
+
+                circle = plt.Circle(pos, 0.01, color='black', zorder=1)
+                ax.add_artist(circle)
+
+            ax.scatter(positions[:, 0],
+                       positions[:, 1],
+                       s=50,
+                       color='black'
+                      , zorder=4)
+
+    def draw(self):
+        """
+        Draws the entire neural network.
+        """
 
 
-        return self.fig,self.axes
-    def plot_2d(self, nrow, ncol, **kwagrs):
-        # 绘制一些示例数据
-        c_map = ["Green", "Blue", "Purple"]
-        # 从kwagrs中获取参数
-        analyzer = kwagrs["analyzer"]
-        if self.fig is None:
-            self._create_subplot_grid2(nrow, ncol)
-        Record = kwagrs["contribution_record"]
+        fig_width = 6 + self.subs_number  # Adjust the width based on the number of subnetworks
+        fig_height = 6  # Keep the height constant or adjust as necessary
 
-        for i, ax in enumerate(self.axes):
+        plt.figure(figsize=(fig_width, fig_height))
+        ax = plt.gca()
+        # Draw connections and nodes for each scale and layer
 
-            if i == 0:  # 第一行图
-                # 在第一个子图上绘制预测值的散点图
-                ax.cla()
-                x_test = kwagrs["x_test"] #5000,2
-                pred = kwagrs["pred"]#5000,1
-                y_true = kwagrs["y_true"]#5000,1
-                avg_test_loss = kwagrs["avg_test_loss"]
-                epoch = kwagrs["epoch"]
-                ax[0].scatter(x_test, pred, label="Pred", color="red")
-                # 在第一个子图上绘制真实值的散点图
-                ax[1].scatter(x_test, y_true, label="True", color="blue")
-                # 设置第一个子图的图例、坐标轴标签和标题
-                ax[0].legend(loc="best", fontsize=16)
-                ax.set_xlabel('x', fontsize=16)
-                ax.set_ylabel('y', fontsize=16)
-                ax.get_xaxis().get_major_formatter().set_useOffset(False)
-                ax.tick_params(labelsize=16, width=2, colors='black')
-                ax.set_title("Test_MSE={:.6f}_Epoch{}".format(avg_test_loss, epoch))
-                ax.legend()
-            if i == 1:  # 第二张图
-                # 在第最后子图上绘制损失曲线
-                ax.cla()
-                loss_record_df = kwagrs["loss_record_df"]
-                ax.plot(loss_record_df["epoch"], loss_record_df["train_loss"], label="Train Loss", color="blue")
-                ax.plot(loss_record_df["epoch"], loss_record_df["valid_loss"], label="Valid Loss", color="red")
-                ax.plot(loss_record_df["epoch"], loss_record_df["test_loss"], label="Test Loss", color="green")
+        for sub in range(self.subs_number):
+            for layer_idx in range(len(self.layer_sizes) - 1):
+                layer1_key = f'scale{sub + 1}_layer{layer_idx}'
+                layer2_key = f'scale{sub + 1}_layer{layer_idx + 1}'
+                if layer1_key in self.node_positions and layer2_key in self.node_positions:
+                    self.draw_connections_with_activation(
+                        self.node_positions[layer1_key],
+                        self.node_positions[layer2_key],
+                        ax
+                    )
 
-                # 设置第二个子图的图例、坐标轴标签和标题
-                ax.set_yscale('log')  # 将y轴设置为对数尺度
-                ax.legend(loc="best", fontsize=16)
-                ax.set_xlabel('Epoch', fontsize=16)
-                ax.set_ylabel('Loss', fontsize=16)
-                ax.get_xaxis().get_major_formatter().set_useOffset(False)
-                ax.tick_params(labelsize=16, width=2, colors='black')
-                ax.set_title("Loss_Epoch{}".format(epoch))
-                # # 画三条虚线
-                for j, value in enumerate(Record):
-                    ax.axvline(x=value, color=c_map[j], linestyle='--')
-            if i == 2:  # 第三行图开始画贡献度
-                if (epoch == Record[0]):
-                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[0])
-            if i == 3:
-                if (epoch == Record[1]):
-                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[1])
-            if i == 4:
-                if (epoch == Record[2]):
-                    # for j in epoch_axv:
-                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[2])
+        # Draw connections between scales
+        self.draw_connections_with_activation(
+            self.final_2,
+            self.node_positions["final_out"],
+            ax
+        )
+        # Save the figure with high DPI
+        plt.savefig('neural_network.png', dpi=300)  # Use a high DPI for better clarity
+        # Adjust the display limits dynamically
+        all_positions = np.concatenate(list(self.node_positions.values()))
+        x_min, y_min = np.min(all_positions, axis=0)
+        x_max, y_max = np.max(all_positions, axis=0)
+        ax.set_xlim(x_min - 1, x_max + 1)
+        ax.set_ylim(y_min - 20, y_max + 20)  # Adding some padding for aesthetics
+        self.draw_nodes(ax)
+        ax.axis('off')
+        plt.show()
 
-        return self.fig, self.axes
 
-    # 使用示例
-if __name__ == '__main__':
-    Plot_Adaptive1= Plot_Adaptive()
-    Plot_Adaptive1.create_subplot_grid2(3, 3)  # 举例：3 行，4 列
-    plt.show()
+
+# Creating an instance of the Msdnn2 class and drawing the neural network
+ms = Msdnn2(4)
+ms.draw()
+

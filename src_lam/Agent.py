@@ -233,7 +233,7 @@ class Expr_Agent(Expr):
             subset=['epoch'])
 
         try:
-            with pd.ExcelWriter(self.Save_Path, mode='w') as writer:
+            with pd.ExcelWriter(self.Save_Path, mode='a',if_sheet_exists="replace") as writer:
                 self.loss_record_df.to_excel(writer, sheet_name="LossRecord", index=False)
                 print("save successfully")
         except Exception as e:
@@ -337,42 +337,12 @@ class Expr_Agent(Expr):
                                   contribution_record=self.args.Con_record,)
 
         elif x_test.shape[1] == 2:
-            #第一个图画预测热力图
-            fig, ax = plt.subplots(3, 1, figsize=(20, 14))
-            from scipy.interpolate import Rbf
-            # 创建网格
-            grid_x, grid_y = np.mgrid[x_test[:, 0].min():x_test[:, 0].max():100j,
-                             x_test[:, 1].min():x_test[:, 1].max():100j]
-
-            # 提取x和y坐标
-            x = x_test[:, 0]
-            y = x_test[:, 1]
-
-            # 使用预测值创建Rbf插值函数
-            rbf_pred = Rbf(x, y, pred[:, 0])
-            grid_z_pred = rbf_pred(grid_x, grid_y)
-
-            # 绘制预测热力图
-            ax[0].imshow(grid_z_pred.T, extent=(x.min(), x.max(), y.min(), y.max()), origin='lower')
-            ax[0].set_title('Pred Interpolated Heatmap')
-            ax[0].set_xlabel('X Coordinate')
-            ax[0].set_ylabel('Y Coordinate')
-
-            # 使用真实值创建Rbf插值函数
-            rbf_true = Rbf(x, y, y_true[:, 0])
-            grid_z_true = rbf_true(grid_x, grid_y)
-
-            # 绘制真实热力图
-            ax[1].imshow(grid_z_true.T, extent=(x.min(), x.max(), y.min(), y.max()), origin='lower')
-            ax[1].set_title('True Interpolated Heatmap')
-            ax[1].set_xlabel('X Coordinate')
-            ax[1].set_ylabel('Y Coordinate')
-
+            pass
         # 保存整个图表
         fig.savefig('{}/combined_loss_{}.png'.format(self.args.Save_Path, epoch),
                     bbox_inches='tight', format='png')
         # # 关闭图表以释放内存
-        if epoch==self.args.epoch:
+        if epoch == self.args.epoch:
             plt.close(fig)
 
     def _CheckPoint(self,**kwargs):
@@ -513,7 +483,7 @@ class PDE_Agent(Expr):
             subset=['epoch'])
 
         try:
-            with pd.ExcelWriter(self.Save_Path, mode='w') as writer:
+            with pd.ExcelWriter(self.Save_Path, mode='a',if_sheet_exists='replace') as writer:
                 self.loss_record_df.to_excel(writer, sheet_name="LossRecord", index=False)
                 print("save successfully")
         except Exception as e:
