@@ -403,13 +403,9 @@ class PDE_Agent(Expr):
                 use_residual= residual_en,
                 activation_set= np.array(activation_set)
             )
-        self._train_dataset = torch.load(self.args.Train_Dataset)
+
         self._valid_dataset = torch.load(self.args.Valid_Dataset)
         self._test_dataset = torch.load(self.args.Test_Dataset)
-
-        self._train_loader = DataLoader(    dataset=self._train_dataset,
-                                            batch_size=self.args.batch_size,
-                                            shuffle=True)
 
         self._valid_loader = DataLoader(    dataset=self._valid_dataset,
                                             batch_size=self.args.batch_size,
