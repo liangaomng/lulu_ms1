@@ -108,7 +108,7 @@ class Expr_Agent(Expr):
         self._Check()
         self.Prepare_model_Dataloader()
         self.plot = Plot_Adaptive() # 画图
-        Excel2yaml(kwargs["Read_set_path"]).excel2yaml() #convert 2yaml
+        Excel2yaml(kwargs["Read_set_path"],self.args.Save_Path).excel2yaml() #convert 2yaml
     def _read_arg_xlsx(self,xls2_object:dict)->Multi_scale2_Args:
 
         args=Multi_scale2_Args(xls2_object["SET"].Scale_Coeff)
