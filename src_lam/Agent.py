@@ -321,7 +321,8 @@ class Expr_Agent(Expr):
         analyzer=Analyzer4scale(model=self.model,d=1,
                                 scale_coeffs=self.args.Scale_Coeff)
         # 读取损失记录
-        loss_record_df = pd.read_excel(self.Save_Path, sheet_name=self.loss_record_sheet)
+        loss_record_df = pd.read_excel(self.Save_Path,
+                                       sheet_name="LossRecord")
 
         # 获取模型预测
         pred = self.model(torch.from_numpy(x_test).float().to(self.device)).detach().cpu().numpy()
@@ -465,11 +466,12 @@ class PDE_Agent(Expr):
         #
         # 如果文件不存在，则初始化一个空的DataFrame
         if not os.path.isfile(self.Save_Path):
-            self.loss_record_df = pd.DataFrame(columns=['epoch',
-                                                        'train_loss',
-                                                        'valid_loss',
-                                                        'test_loss'])
+            # #self.loss_record_df = pd.DataFrame(columns=['epoch',
+            #                                             'train_loss',
+            #                                             'valid_loss',
+            #                                             'test_loss'])
             print("problem",flush=True)
+            exit()
 
         # 否则，读取现有文件
         else:
@@ -481,6 +483,7 @@ class PDE_Agent(Expr):
         self.loss_record_df = pd.concat([self.loss_record_df, new_record_df],
                                         ignore_index=True).drop_duplicates(
             subset=['epoch'])
+
 
         try:
             with pd.ExcelWriter(self.Save_Path, mode='a',if_sheet_exists='replace') as writer:
@@ -559,11 +562,9 @@ class PDE_Agent(Expr):
         })
         # 如果文件不存在，则初始化一个空的DataFrame
         if not os.path.isfile(self.Save_Path):
-            self.loss_record_df = pd.DataFrame(columns=['epoch',
-                                                        'train_loss',
-                                                        'valid_loss',
-                                                        'test_loss'])
+
             print("problem",flush=True)
+            exit()
 
         # 否则，读取现有文件
         else:
