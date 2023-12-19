@@ -490,32 +490,35 @@ class PDE_Agent(Expr):
             print("An error occurred:", e)
     def Train_PDE(self):
         self.model.train()
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.lr)
+        optimizer = torch.optim.Adam(self.model.parameters(),
+                                     lr=self.args.lr)
         criterion = nn.MSELoss()
         boundary_loss=nn.MSELoss()
         start_b_index= self.args.All_samples-self.args.Boundary_samples #bondary index
+
         for epoch in range(self.args.epoch):
             #every epoch to sample in PDE_solver
-            for inputs, labels in self._train_loader:
-                inputs = inputs.to(self.device)
-                labels = labels.to(self.device)
-                #predict
-                outputs = self.model(inputs)#[batch,5000,1]
-                boundary_pred=outputs[:,start_b_index:,0]
-                boundary_label =  labels[:,start_b_index:,0].to(self.device)
-                #assert  #[batch,2600]
-                assert boundary_pred.shape[-1] == self.args.Boundary_samples
-                #boundary loss
-                b_loss = self.args.penalty * boundary_loss(boundary_pred, boundary_label)
-                #domian loss
-                loss1=criterion(labels[:,:start_b_index,0], outputs[:,:start_b_index,0])
-                loss = loss1+b_loss
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                epoch_loss = loss.item()
+            sample=self.solver.sample(self.args.batch_size)
+            sample=torch.from_numpy(sample).float().to(self.device)
+            inputs = sample[:,:,0:2]
+            labels = sample[:,:,2:3]
+            #predict
+            outputs = self.model(inputs)#[batch,5000,1]
+            boundary_pred=outputs[:,start_b_index:,0]
+            boundary_label =  labels[:,start_b_index:,0].to(self.device)
+            #assert  #[batch,2600]
+            assert boundary_pred.shape[-1] == self.args.Boundary_samples
+            #boundary loss
+            b_loss = self.args.penalty * boundary_loss(boundary_pred, boundary_label)
+            #domian loss
+            loss1=criterion(labels[:,:start_b_index,0], outputs[:,:start_b_index,0])
+            loss = loss1+b_loss
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            epoch_loss = loss.item()
 
-            aver_loss=epoch_loss/len(self._train_loader)
+            aver_loss=epoch_loss/self.args.batch_size
             print("epoch:{},aver_loss:{:.6f}".format(epoch,aver_loss),flush=True)
 
             if (epoch % 10 == 0):
@@ -536,8 +539,9 @@ class PDE_Agent(Expr):
             labels = labels.to(self.device)
             outputs = self.model(inputs)
             loss = criterion(outputs, labels)
-            valid_loss = loss.item()
-        aver_loss = valid_loss / len(self._test_loader)
+            valid_loss += loss.item()
+
+        aver_loss = valid_loss / len(self._valid_loader)
         print('epoch: {}, valid loss: {:.6f}'.format(epoch, aver_loss))
         return aver_loss
     def _update_loss_record(self, epoch,
@@ -607,12 +611,10 @@ class PDE_Agent(Expr):
         avg_test_loss = avg_test_loss
         # 加载测试数据集
         test_data = torch.load(self.args.Test_Dataset)
-        xy=test_data[0][0]
-        pred=test_data[0][1]
+        xy=test_data[0][0] #x,y的坐标【5000，2】
 
         # 将TensorDataset转换为numpy数组
         x_test = xy.numpy() # [5000,2]
-        U_true = pred.numpy()#[5000,1]
 
         # analyzer
         analyzer = Analyzer4scale(model=self.model,
@@ -629,7 +631,6 @@ class PDE_Agent(Expr):
                                           ncol=3,
                                           loss_record_df=loss_record_df,
                                           analyzer=analyzer,
-                                          u_true=U_true,
                                           pred=pred,
                                           epoch=epoch,
                                           avg_test_loss=avg_test_loss,

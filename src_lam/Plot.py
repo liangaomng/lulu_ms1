@@ -86,7 +86,7 @@ class Plot_Adaptive:
                         ax.axvline(x=value, color=c_map[j], linestyle='--')
                     for loss_type in ['valid_loss']:
                         min_loss = np.min(loss_record_df[loss_type])
-                        print(loss_record_df[loss_type])
+
                         min_epoch = loss_record_df[loss_record_df[loss_type] == min_loss]["epoch"].values[0]
                         ax.axhline(y=min_loss, xmax=min_epoch,color='black', linestyle=':')
                         # 在最小损失点做标记
@@ -172,7 +172,7 @@ class Plot_Adaptive:
                         ax.axvline(x=value, color=c_map[j], linestyle='--')
                     for loss_type in ['valid_loss']:
                         min_loss = np.min(loss_record_df[loss_type])
-                        print(loss_record_df[loss_type])
+
                         min_epoch = loss_record_df[loss_record_df[loss_type] == min_loss]["epoch"].values[0]
                         ax.axhline(y=min_loss, xmax=min_epoch, color='black', linestyle=':')
                         # 在最小损失点做标记
