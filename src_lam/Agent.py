@@ -585,6 +585,8 @@ class PDE_Agent(Expr):
                 print("save successfully")
         except Exception as e:
             print("An error occurred:", e)
+        # 画loss的值
+        self._save4plot(epoch, avg_test_loss=test_loss)
     def _Test4Save(self,epoch):
         self.model.eval()
         test_loss = 0.0
