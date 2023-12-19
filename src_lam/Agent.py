@@ -489,6 +489,7 @@ class PDE_Agent(Expr):
         except Exception as e:
             print("An error occurred:", e)
     def Train_PDE(self):
+        self.model = self.model.to(self.device)
         self.model.train()
         optimizer = torch.optim.Adam(self.model.parameters(),
                                      lr=self.args.lr)
