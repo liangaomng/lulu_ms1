@@ -1,11 +1,18 @@
 import pandas as pd
 import yaml
 from pathlib import Path
-
+import os
 
 class Excel2yaml():
     def __init__(self,ex_path,SAVE):
+
         self.ex_path=ex_path
+        # 判断保存路径是否存在，不存在则创建
+        if os.path.exists(SAVE):
+            pass
+        else:
+            os.mkdir(SAVE)
+            print("we have create")
         # 构造新的保存路径，替换原始扩展名为.yaml
         self.save_path = str(Path(ex_path).with_suffix('.yaml'))
         separator_index = self.save_path .find('/')
@@ -41,6 +48,7 @@ class Excel2yaml():
                 # 将字典转换为 YAML 格式的字符串
 
         yaml_data = yaml.dump(sheets_data, allow_unicode=True)
+
 
         # 将 YAML 数据保存到文件
         with open(self.save_path, 'w', encoding='utf-8') as file:
