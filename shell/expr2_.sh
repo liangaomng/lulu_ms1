@@ -1,6 +1,6 @@
 # 检查并安装 pandas
 #pip install pandas
-#pip install openpyxl
+#pip install openpyxl==3.0.10
 #pip install xlrd==1.2.0
 #pip install captum
 #cd if you need

@@ -1,7 +1,7 @@
 
 
 import argparse
-from src_lam.Agent import PDE_Agent
+from src_lam.Agent import Expr_Agent
 from src_lam.possion_holes import PoissonEquationWithHoles
 
 domain_size = 1.0
@@ -14,9 +14,10 @@ num_samples_ellipse = 400
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Pytorch")
     parser.add_argument('--expr_set_path', type=str, help='expr_set_path')  # "Expr2d/Expr_1.xlsx"
+    parser.add_argument('--compile_mode', default=False,type=bool,choices=[False,True], help='compile_mode')
     args = parser.parse_args()
     read_set_path = args.expr_set_path
-
+    # poisson
     poisson = PoissonEquationWithHoles(domain_size,
                                        circle_params,
                                        ellipse_params,
@@ -24,12 +25,13 @@ if __name__=="__main__":
                                        num_samples_circles,
                                        num_samples_ellipse)
 
-    args.expr_set_path="Expr2d/Expr_1.xlsx"
     # expr
-    expr = PDE_Agent(
+    expr = Expr_Agent(
+                      pde_task=True,
                       solver=poisson,
                       Read_set_path=args.expr_set_path,
-                      Loss_Save_Path=read_set_path)
+                      Loss_Save_Path=read_set_path,
+                      compile_mode=args.compile_mode)
 
     expr.Do_Expr()
 
