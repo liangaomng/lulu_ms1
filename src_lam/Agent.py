@@ -238,6 +238,9 @@ class Expr_Agent(Expr):
                 print("save successfully")
         except Exception as e:
             print("An error occurred:", e)
+
+        # 画loss的值
+        self._save4plot(epoch, test_loss)
     def _Valid(self,**kwargs):
 
         epoch = kwargs["epoch"]
@@ -301,9 +304,6 @@ class Expr_Agent(Expr):
                 sum_test_loss += test_loss.item()
 
         avg_test_loss = sum_test_loss / len(self._test_loader)
-
-        # 画loss的值
-        self._save4plot(epoch, avg_test_loss)
 
         print(f'Test Loss: {avg_test_loss:.6f}')
         return avg_test_loss
@@ -491,6 +491,8 @@ class PDE_Agent(Expr):
                 print("save successfully")
         except Exception as e:
             print("An error occurred:", e)
+        # 画loss的值
+        self._save4plot(epoch, avg_test_loss=test_loss)
     def Train_PDE(self):
         self.model = self.model.to(self.device)
         self.model.train()
@@ -596,8 +598,6 @@ class PDE_Agent(Expr):
         aver_test_loss = test_loss / len(self._test_loader)
         print('epoch: {}, test loss: {:.6f}'.format(epoch, aver_test_loss))
 
-        # 画loss的值
-        self._save4plot(epoch, avg_test_loss=aver_test_loss)
         return aver_test_loss
     def _CheckPoint(self,**kwargs):
         epoch = kwargs["epoch"]
