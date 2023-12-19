@@ -370,7 +370,7 @@ class PDE_Agent(Expr):
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.plot = Plot_Adaptive() # 画图
         self.Save_Path = kwargs["Loss_Save_Path"]
-        Excel2yaml(kwargs["Read_set_path"]).excel2yaml() #convert 2yaml
+        Excel2yaml(kwargs["Read_set_path"],self.args.Save_Path).excel2yaml() #convert 2yaml
 
         self.Prepare_model()
     def Prepare_model(self):

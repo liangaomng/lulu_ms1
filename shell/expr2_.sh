@@ -8,5 +8,5 @@
 #实验1
 
 python3 Expr2_run.py --expr_set_path "Expr2d/Expr_1.xlsx"
-python3 Expr2_run.py --expr_set_path "Expr1d/Expr_2.xlsx"
-python3 Expr2_run.py --expr_set_path "Expr1d/Expr_3.xlsx"
+python3 Expr2_run.py --expr_set_path "Expr2d/Expr_2.xlsx"
+python3 Expr2_run.py --expr_set_path "Expr2d/Expr_3.xlsx"

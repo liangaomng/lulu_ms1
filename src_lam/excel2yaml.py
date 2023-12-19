@@ -4,10 +4,18 @@ from pathlib import Path
 
 
 class Excel2yaml():
-    def __init__(self,ex_path):
+    def __init__(self,ex_path,SAVE):
         self.ex_path=ex_path
         # 构造新的保存路径，替换原始扩展名为.yaml
         self.save_path = str(Path(ex_path).with_suffix('.yaml'))
+        separator_index = self.save_path .find('/')
+        # Extracting the part before the first '/'
+        part_to_replace = self.save_path[:separator_index]
+        # Variable to replace the extracted part
+        replacement_variable = SAVE
+        # Replacing the extracted part with the variable
+        new_path = self.save_path.replace(part_to_replace, replacement_variable)
+        self.save_path=new_path
         print("save_path",self.save_path)
 
     def excel2yaml(self,exhit='LossRecord'):

@@ -6,7 +6,7 @@
 #cd if you need
 
 #实验1
-
+python3 Expr1_run.py --expr_set_path "Expr1d/Expr_1.xlsx"
 python3 Expr1_run.py --expr_set_path "Expr1d/Expr_2.xlsx"
 python3 Expr1_run.py --expr_set_path "Expr1d/Expr_3.xlsx"
 python3 Expr1_run.py --expr_set_path "Expr1d/Expr_4.xlsx"
