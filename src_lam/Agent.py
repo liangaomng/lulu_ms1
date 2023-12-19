@@ -508,6 +508,7 @@ class PDE_Agent(Expr):
             boundary_pred=outputs[:,start_b_index:,0]
             boundary_label =  labels[:,start_b_index:,0].to(self.device)
             #assert  #[batch,2600]
+
             assert boundary_pred.shape[-1] == self.args.Boundary_samples
             #boundary loss
             b_loss = self.args.penalty * boundary_loss(boundary_pred, boundary_label)
