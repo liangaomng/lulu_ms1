@@ -162,12 +162,12 @@ class Plot_Adaptive:
                 # 在第最后子图上绘制损失曲线
                 ax.cla()
                 loss_record_df = kwagrs["loss_record"]
-                ax.plot(loss_record_df[:,0], loss_record_df[:,1], label="Train Loss", color="blue")
+                #ax.plot(loss_record_df[:,0], loss_record_df[:,1], label="Train Loss", color="blue")
                 ax.plot(loss_record_df[:,0], loss_record_df[:,2], label="Valid Loss", color="red")
-                ax.plot(loss_record_df[:,0], loss_record_df[:,3], label="Test Loss", color="green")
+                #ax.plot(loss_record_df[:,0], loss_record_df[:,3], label="Test Loss", color="green")
 
                 # # 画三条虚线
-                if epoch >= 100:
+                if epoch >= 1000:
                     for j, value in enumerate(Record):
                         ax.axvline(x=value, color=c_map[j], linestyle='--')
                     for loss_type in ['valid_loss']:
@@ -194,15 +194,15 @@ class Plot_Adaptive:
                 ax.set_title("Loss_Epoch{}".format(epoch))
             if i == 4:  # 第三行图开始画贡献度
                 if (epoch == Record[0]):
-                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[0])
+                    analyzer.plot_contributions(ax=self.axes[4], fig=self.fig, cmap=c_map[0])
                     print("epoch", epoch)
             if i == 5:
                 if (epoch == Record[1]):
-                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[1])
+                    analyzer.plot_contributions(ax=self.axes[5], fig=self.fig, cmap=c_map[1])
             if i == 6:
                 if (epoch == Record[2]):
                     # for j in epoch_axv:
-                    analyzer.plot_contributions(ax=self.axes[i], fig=self.fig, cmap=c_map[2])
+                    analyzer.plot_contributions(ax=self.axes[6], fig=self.fig, cmap=c_map[2])
 
         return self.fig, self.axes
 

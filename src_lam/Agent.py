@@ -56,6 +56,7 @@ class Base_Args():
         self.Con_record=None
         self.Loss_Record_Path = None
         self.PDE=None #task
+        self.fig_record_interve=None
 
     @abstractmethod
     def Layer_set(self,layer_set:list):
@@ -114,6 +115,7 @@ class Expr_Agent(Expr):
         self.plot = Plot_Adaptive() # 画图
         self.args.PDE=pde_task
         Excel2yaml(kwargs["Read_set_path"],self.args.Save_Path).excel2yaml() #convert 2yaml
+
         if kwargs["compile_mode"]==True:
             self.model=torch.compile(self.model,mode="max-autotune")
 
@@ -133,6 +135,7 @@ class Expr_Agent(Expr):
         args.batch_size=int(xls2_object["SET"].Batch_size[0])
         args.Con_record=xls2_object["SET"].Con_record #list
         args.Loss_Record_Path = args.Save_Path + "/loss.npy"
+        args.fig_record_interve=int(xls2_object["SET"].Fig_Record_Interve[0])
         if kwargs["pde_task"]==True:
             args.penalty=xls2_object["SET"].Penalty[0]
             args.Boundary_samples=int(xls2_object["SET"].Sum_Samples[0]-
@@ -215,27 +218,31 @@ class Expr_Agent(Expr):
             os.makedirs(self.Save_Path)
         self.loss_record_sheet = "LossRecord"  # 指定工作表名称
 
-    def _update_loss_record(self, epoch,
-                            train_loss=None,
-                            valid_loss=None,
-                            test_loss=None):
-        # # 创建一个新记录的DataFrame
-        record = np.array([[epoch, train_loss, valid_loss, test_loss]])
-        # 检查文件是否存在
-        if not os.path.isfile(self.args.Loss_Record_Path):
-            # 如果文件不存在，初始化一个空数组并保存
-            np.save(self.args.Loss_Record_Path, record)
-        else:
-            # 读取现有文件
-            existing_data = np.load(self.args.Loss_Record_Path)
-            # 过滤掉与当前 epoch 相同的记录
-            existing_data = existing_data[existing_data[:, 0] != epoch]
-            # 将新记录追加到现有数据中
-            updated_data = np.vstack((existing_data, record))
-            # 保存更新后的数据
-            np.save(self.args.Loss_Record_Path, updated_data)
+    def _update_loss_record(self, epoch,train_loss):
+
         # 画loss的值
-        self._save4plot(epoch, test_loss)
+        if epoch % self.args.fig_record_interve == 0:
+            valid_loss=self._Valid(epoch=epoch,num_epochs=self.args.epoch)
+            test_loss =self._Test4Save(epoch=epoch)
+            # # 创建一个新记录的DataFrame
+            record = np.array([[epoch, train_loss, valid_loss, test_loss]])
+            # 检查文件是否存在
+            if not os.path.isfile(self.args.Loss_Record_Path):
+                # 如果文件不存在，初始化一个空数组并保存
+                np.save(self.args.Loss_Record_Path, record)
+            else:
+                # 读取现有文件
+                existing_data = np.load(self.args.Loss_Record_Path)
+                # 过滤掉与当前 epoch 相同的记录
+                existing_data = existing_data[existing_data[:, 0] != epoch]
+                # 将新记录追加到现有数据中
+                updated_data = np.vstack((existing_data, record))
+                # 保存更新后的数据
+                np.save(self.args.Loss_Record_Path, updated_data)
+
+                self._CheckPoint(epoch=epoch)
+                self._save4plot(epoch, test_loss)
+
     def _Valid(self,**kwargs):
 
         epoch = kwargs["epoch"]
@@ -277,11 +284,8 @@ class Expr_Agent(Expr):
             aver_loss = epoch_loss / len( self._train_loader)
 
             print('epoch: {}, train loss: {:.6f}'.format(epoch, aver_loss))
-            if (epoch % 10 == 0):
-                valid_loss=self._Valid(epoch=epoch,num_epochs=self.args.epoch)
-                self._CheckPoint(epoch=epoch)
-                test_loss =self._Test4Save(epoch=epoch)
-                self._update_loss_record(epoch, train_loss=aver_loss, valid_loss=valid_loss, test_loss=test_loss)
+
+            self._update_loss_record(epoch, train_loss=aver_loss)
     def _Test4Save(self,**kwargs):
 
         epoch = kwargs["epoch"]
@@ -318,7 +322,7 @@ class Expr_Agent(Expr):
 
         # 获取模型预测
         pred = self.model(torch.from_numpy(x_test).float().to(self.device)).detach().cpu().numpy()
-        print("test",x_test.shape) #[10,5000,2]
+        #print("test",x_test.shape) #[10,5000,2]
 
         if x_test.shape[1] == 1: #[500,1]
             # analyzer
@@ -404,14 +408,10 @@ class Expr_Agent(Expr):
             aver_loss=epoch_loss/self.args.batch_size
             print("epoch:{},aver_loss:{:.6f}".format(epoch,aver_loss),flush=True)
 
-            if (epoch % 10 == 0):
-                valid_loss=self._Valid(epoch=epoch,num_epochs=self.args.epoch)
-                self._CheckPoint(epoch=epoch)
-                test_loss =self._Test4Save(epoch=epoch)
-                self._update_loss_record(epoch,
-                                         train_loss=aver_loss,
-                                         valid_loss=valid_loss,
-                                         test_loss=test_loss)
+
+
+            self._update_loss_record(epoch,
+                                     train_loss=aver_loss)
 
     def Do_Expr(self):
 
