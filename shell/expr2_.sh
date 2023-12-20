@@ -6,7 +6,8 @@
 #cd if you need
 
 #实验1
-
+conda init bash
+conda activate base
 python Expr2_run.py --expr_set_path "Expr2d/Expr_1.xlsx"
 python Expr2_run.py --expr_set_path "Expr2d/Expr_2.xlsx"
 python Expr2_run.py --expr_set_path "Expr2d/Expr_3.xlsx"
