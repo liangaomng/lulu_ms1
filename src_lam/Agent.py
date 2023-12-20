@@ -240,8 +240,8 @@ class Expr_Agent(Expr):
                 # 保存更新后的数据
                 np.save(self.args.Loss_Record_Path, updated_data)
 
-                self._CheckPoint(epoch=epoch)
-                self._save4plot(epoch, test_loss)
+            self._CheckPoint(epoch=epoch)
+            self._save4plot(epoch, test_loss)
 
     def _Valid(self,**kwargs):
 

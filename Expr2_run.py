@@ -32,7 +32,7 @@ if __name__=="__main__":
                       Read_set_path=args.expr_set_path,
                       Loss_Save_Path=read_set_path,
                       compile_mode=args.compile_mode,
-                      )
+                      record_interve=100)
 
     expr.Do_Expr()
 

@@ -56,6 +56,7 @@ class Plot_Adaptive:
         y_true = kwagrs["y_true"]
         avg_test_loss = kwagrs["avg_test_loss"]
         epoch = kwagrs["epoch"]
+
         for i, ax in enumerate(self.axes):
 
             if i==0: #   第一张图
@@ -86,8 +87,8 @@ class Plot_Adaptive:
                         ax.axvline(x=value, color=c_map[j], linestyle='--')
                     for loss_type in ['valid_loss']:
                         #valid loss
-                        min_loss = np.min(loss_record_df[:,1])
-                        min_epoch = loss_record_df[np.where(loss_record_df[:, 1] == min_loss)][0, 0]
+                        min_loss = np.min(loss_record_df[:,2])
+                        min_epoch = loss_record_df[np.where(loss_record_df[:, 2] == min_loss)][0, 0]
                         ax.axhline(y=min_loss, xmax=min_epoch,color='black', linestyle=':',linewidth=4)
                         # 在最小损失点做标记
                         ax.plot(min_epoch,min_loss, '*',
