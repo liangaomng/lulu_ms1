@@ -173,8 +173,8 @@ class Plot_Adaptive:
                         ax.axvline(x=value, color=c_map[j], linestyle='--')
                     for loss_type in ['valid_loss']:
                         # valid loss   在序号为1的列
-                        min_loss = np.min(loss_record_df[:, 1])
-                        min_epoch = loss_record_df[np.where(loss_record_df[:, 1] == min_loss)][0, 0]
+                        min_loss = np.min(loss_record_df[:, 2])
+                        min_epoch = loss_record_df[np.where(loss_record_df[:, 2] == min_loss)][0, 0]
                         ax.axhline(y=min_loss, xmax=min_epoch, color='black', linestyle=':', linewidth=4)
                         # 在最小损失点做标记
                         ax.plot(min_epoch, min_loss, '*',
@@ -184,7 +184,7 @@ class Plot_Adaptive:
                         extra_ticks = ax.get_yticks().tolist() + [min_loss]
                         ax.set_yticks(extra_ticks)
                         # 设置刻度标签，确保最小损失值的标签使用科学记数法
-                        ax.axvline(x=min_epoch, ymin=1e-10, ymax=min_loss, linestyle='--', linewidth=4)
+                        ax.axvline(x=min_epoch, ymin=1e-7, ymax=min_loss, linestyle='--', linewidth=4)
                 ax.legend(loc="best", fontsize=16)
                 # 设置第二个子图的图例、坐标轴标签和标题
                 ax.set_yscale('log')  # 将y轴设置为对数尺度
