@@ -162,12 +162,12 @@ class Plot_Adaptive:
                 # 在第最后子图上绘制损失曲线
                 ax.cla()
                 loss_record_df = kwagrs["loss_record"]
-                #ax.plot(loss_record_df[:,0], loss_record_df[:,1], label="Train Loss", color="blue")
+                ax.plot(loss_record_df[:,0], loss_record_df[:,1], label="Train Loss", color="blue")
                 ax.plot(loss_record_df[:,0], loss_record_df[:,2], label="Valid Loss", color="red")
-                #ax.plot(loss_record_df[:,0], loss_record_df[:,3], label="Test Loss", color="green")
+                ax.plot(loss_record_df[:,0], loss_record_df[:,3], label="Test Loss", color="green")
 
                 # # 画三条虚线
-                if epoch >= 1000:
+                if epoch >= 100:
                     for j, value in enumerate(Record):
                         ax.axvline(x=value, color=c_map[j], linestyle='--')
                     for loss_type in ['valid_loss']:
