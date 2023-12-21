@@ -13,7 +13,7 @@ num_samples_ellipse = 400
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Pytorch")
-    parser.add_argument('--expr_set_path', type=str, help='expr_set_path')  # "Expr2d/Expr_1.xlsx"
+    parser.add_argument('--expr_set_path', type=str, help='expr_set_path')  # "Expr2d/Expr_8.xlsx"
     parser.add_argument('--compile_mode', default=False,type=bool,choices=[False,True], help='compile_mode')
     args = parser.parse_args()
     read_set_path = args.expr_set_path

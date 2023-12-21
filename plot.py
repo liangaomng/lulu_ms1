@@ -1,122 +1,54 @@
-# Importing required libraries
 import numpy as np
 import matplotlib.pyplot as plt
 
-class Msdnn2():
-    def __init__(self, subs_number):
+class Msdnn2EnhancedVisualization():
+    def __init__(self, subs_number, layer_sizes):
         self.subs_number = subs_number
-        self.layer_sizes = [2, 3, 3, 3, 1]
+        self.layer_sizes = layer_sizes
         self.node_positions = {}
-        self.final_2 = None  # 倒数第二层的4个节点
+        self.node_size = 3000 / max(layer_sizes) if max(layer_sizes) > 10 else 50
         self.calculate_positions()
-        self.final=[subs_number,1] #4 is the number of scales and 1 is the number of nodes in the final layer
 
     def calculate_positions(self):
-        """
-        Calculates the positions of each neuron in each layer and scale adaptively.
-        """
-
-        # Determine the vertical space needed by the largest layer
         max_layer_size = max(self.layer_sizes)
-        layer_height = 20 / max_layer_size  # Adaptive height based on the largest layer
-
-        # Determine the spacing between scales adaptively
+        layer_height = 20 / max_layer_size
         scale_spacing = 80.0 / self.subs_number
 
-        # Calculate positions for each layer and scale
         for sub in range(self.subs_number):
             for layer_idx, size in enumerate(self.layer_sizes):
-                positions = self.layer_positions(size, layer_idx, layer_height, scale_spacing * sub)
-                self.node_positions[f'scale{sub + 1}_layer{layer_idx}'] = positions
-        # Calculate the positions of the second-to-last layer and final node adaptively
-        self.final_2 = np.array([[self.subs_number, scale_spacing * sub] for sub in range(self.subs_number)])
-        positions = np.array([[len(self.layer_sizes) + 1.0, scale_spacing * (self.subs_number -2.5)]])
-        print(positions)
-        self.node_positions['final_out'] = positions
-
-    def layer_positions(self, n_nodes, layer_idx, max_height,scale_index):
-        """
-        Calculate the positions for a layer of nodes.
-        """
-        if n_nodes == 1:
-            return np.array([[layer_idx, scale_index]])
-        else:
-            return np.column_stack((np.full(n_nodes, layer_idx), scale_index+np.linspace(-max_height , max_height, n_nodes)))
-
-    def draw_connections_with_activation(self, layer1_positions, layer2_positions, ax):
-        """
-        Draws connections between two layers.
-        """
-
-        for i, pos1 in enumerate(layer1_positions):
-            for j, pos2 in enumerate(layer2_positions):
-                weight = 0  # Since weights are initialized to 0
-                arrow_props = dict(arrowstyle="-",color='blue', alpha=0.75, lw=2)
-
-                ax.annotate("", xy=pos2, xytext=pos1, arrowprops=arrow_props)
-
-    def draw_nodes(self, ax):
-        """
-        Draws the nodes on the given axes.
-        """
-        for key, positions in self.node_positions.items():
-
-            for pos in positions:
-
-                circle = plt.Circle(pos, 0.01, color='black', zorder=1)
-                ax.add_artist(circle)
-
-            ax.scatter(positions[:, 0],
-                       positions[:, 1],
-                       s=50,
-                       color='black'
-                      , zorder=4)
+                vertical_spacing = layer_height / max(size - 1, 1)
+                positions = np.column_stack((
+                    np.full(size, layer_idx + scale_spacing * sub),
+                    np.linspace(-vertical_spacing * size / 2, vertical_spacing * size / 2, size)
+                ))
+                self.node_positions[f'scale{sub}_layer{layer_idx}'] = positions
 
     def draw(self):
-        """
-        Draws the entire neural network.
-        """
-
-
-        fig_width = 6 + self.subs_number  # Adjust the width based on the number of subnetworks
-        fig_height = 6  # Keep the height constant or adjust as necessary
-
+        fig_width = 10 + self.subs_number * 2
+        fig_height = 10 + max(self.layer_sizes) / 5
         plt.figure(figsize=(fig_width, fig_height))
         ax = plt.gca()
-        # Draw connections and nodes for each scale and layer
 
+        # Draw connections
         for sub in range(self.subs_number):
             for layer_idx in range(len(self.layer_sizes) - 1):
-                layer1_key = f'scale{sub + 1}_layer{layer_idx}'
-                layer2_key = f'scale{sub + 1}_layer{layer_idx + 1}'
-                if layer1_key in self.node_positions and layer2_key in self.node_positions:
-                    self.draw_connections_with_activation(
-                        self.node_positions[layer1_key],
-                        self.node_positions[layer2_key],
-                        ax
-                    )
+                layer1_positions = self.node_positions[f'scale{sub}_layer{layer_idx}']
+                layer2_positions = self.node_positions[f'scale{sub}_layer{layer_idx + 1}']
+                self.draw_connections(layer1_positions, layer2_positions, ax)
 
-        # Draw connections between scales
-        self.draw_connections_with_activation(
-            self.final_2,
-            self.node_positions["final_out"],
-            ax
-        )
-        # Save the figure with high DPI
-        plt.savefig('neural_network.png', dpi=300)  # Use a high DPI for better clarity
-        # Adjust the display limits dynamically
-        all_positions = np.concatenate(list(self.node_positions.values()))
-        x_min, y_min = np.min(all_positions, axis=0)
-        x_max, y_max = np.max(all_positions, axis=0)
-        ax.set_xlim(x_min - 1, x_max + 1)
-        ax.set_ylim(y_min - 20, y_max + 20)  # Adding some padding for aesthetics
-        self.draw_nodes(ax)
+        # Draw nodes
+        for positions in self.node_positions.values():
+            ax.scatter(positions[:, 0], positions[:, 1], s=self.node_size, color='black', zorder=4)
+
         ax.axis('off')
         plt.show()
 
+    def draw_connections(self, layer1_positions, layer2_positions, ax):
+        for pos1 in layer1_positions:
+            for pos2 in layer2_positions:
+                ax.plot([pos1[0], pos2[0]], [pos1[1], pos2[1]], color='grey', linestyle='-', linewidth=0.5)
 
-
-# Creating an instance of the Msdnn2 class and drawing the neural network
-ms = Msdnn2(4)
-ms.draw()
-
+# Testing the enhanced visualization with a large middle layer
+large_layer_sizes = [2, 10, 10, 3, 1]
+ms_enhanced_viz = Msdnn2EnhancedVisualization(4, large_layer_sizes)
+ms_enhanced_viz.draw()
