@@ -4,7 +4,6 @@ import torch.nn as nn
 from .act_fuction import *
 import numpy as np
 import copy
-
 #mlp
 class Single_MLP(nn.Module):
     def __init__(self,
@@ -62,7 +61,6 @@ class Single_MLP(nn.Module):
 
         return x
 
-
 class Multi_scale2(nn.Module):
     """Fully-connected neural network."""
     def __init__(self,
@@ -75,7 +73,6 @@ class Multi_scale2(nn.Module):
         super().__init__()
         act_list= self._Return_act_list(act_set) #4个激活函数,module list,每个有3个激活函数
         kernel_method=self._Return_init_list(ini_set)#4个初始化方法，每个1个初始化方法
-
 
         one_layer = Single_MLP(     input_size=layer_set[0],
                                     layer_set=layer_set,
@@ -114,20 +111,34 @@ class Multi_scale2(nn.Module):
             if isinstance(m, nn.Linear):
                 kernal_method[i](m.weight)
                 nn.init.zeros_(m.bias)
+import torch.nn as nn
+class Muti_scaleSiren(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.siren = Siren(in_features=2,
+                      out_features=1,
+                      hidden_features=256,
+                      hidden_layers=3,
+                      outermost_linear=False,
+                      first_omega_0=1,
+                      hidden_omega_0=1,
+                      )
 
 
-# single_net_act=np.array(["sinc_psi","sinc_psi","sinc_psi"])
-# single_init_weight=np.array(["xavier_uniform"])
-# multi_net_act= np.repeat(single_net_act[np.newaxis,:],4,axis=0)
-# multi_init_weight= np.repeat(single_init_weight[np.newaxis,:],4,axis=0)
-#
-# ms2=Multi_scale2(sub_layer_number=4,
-#                  layer_set=[1,10,10,10,1],
-#                  act_set=multi_net_act,
-#                  ini_set=multi_init_weight,
-#                  residual=False,
-#                  scale_number=[1,2,3,4])
-# a=ms2(torch.ones(1,1))
-# print(a)
+    def forward(self,x):
+        x = self.siren(x)
+
+
+
+        return x
+
+    def  _clones(self,module, N):
+        #重复N次，深拷贝
+        return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
+
+
+
+
+
 
 

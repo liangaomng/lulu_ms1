@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from .nn_class import  Multi_scale2,Single_MLP
+from .nn_class import  Multi_scale2,Single_MLP,Muti_scaleSiren
 from torch import optim
 from torch import nn
 from abc import abstractmethod
@@ -102,9 +102,12 @@ class Expr_Agent(Expr):
 
         xls2_dict =Return_expr_dict.sheet2dict(kwargs["Read_set_path"])
         self.args = self._read_arg_xlsx(xls2_dict,pde_task=pde_task) # 读取参数
-        self.args.PDE = pde_task  # 确定任务
+        self.args.PDE = pde_task  # 确定方程
+
         if pde_task==True:
             self.solver = kwargs["solver"]
+            if type(self.solver.data)==deepxde.data.PDE:
+                print("deep-xde")
 
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.Save_Path = kwargs["Loss_Save_Path"] #save pathlike  “expr1/expr_1.xlsx‘
@@ -113,7 +116,7 @@ class Expr_Agent(Expr):
         self._Check()
         self.Prepare_model_Dataloader()
         self.plot = Plot_Adaptive() # 画图
-        self.args.PDE=pde_task
+
         Excel2yaml(kwargs["Read_set_path"],self.args.Save_Path).excel2yaml() #convert 2yaml
 
         if kwargs["compile_mode"]==True:
@@ -175,6 +178,8 @@ class Expr_Agent(Expr):
                 residual= residual_en[0],
                 scale_number=scale_omegas_coeff
             )
+            self.model =Muti_scaleSiren()
+
         if self.args.model == "fnn":
             layer_set = self.args.Layer_Set_list#[1, 10, 10, 10, 1]
             residual_en = self.args.Residual_Set_list
@@ -376,6 +381,7 @@ class Expr_Agent(Expr):
 
         self.model = self.model.to(self.device)
         self.model.train()
+        print(self.model)
         optimizer = torch.optim.Adam(self.model.parameters(),
                                      lr=self.args.lr)
         criterion = nn.MSELoss()
@@ -405,10 +411,10 @@ class Expr_Agent(Expr):
             optimizer.step()
             epoch_loss = loss.item()
 
+
+
             aver_loss=epoch_loss/self.args.batch_size
             print("epoch:{},aver_loss:{:.6f}".format(epoch,aver_loss),flush=True)
-
-
 
             self._update_loss_record(epoch,
                                      train_loss=aver_loss)
