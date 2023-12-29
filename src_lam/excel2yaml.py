@@ -4,30 +4,31 @@ from pathlib import Path
 import os
 
 class Excel2yaml():
-    def __init__(self,ex_path,SAVE):
+    def __init__(self,path,excel):
 
-        self.ex_path=ex_path
+        self.save_ymlpath=path+".yaml" #yml 路径
+        self.excel_path=excel
         # 判断保存路径是否存在，不存在则创建
-        if os.path.exists(SAVE):
-            pass
-        else:
-            os.mkdir(SAVE)
-            print("we have create")
-        # 构造新的保存路径，替换原始扩展名为.yaml
-        self.save_path = str(Path(ex_path).with_suffix('.yaml'))
-        separator_index = self.save_path .find('/')
-        # Extracting the part before the first '/'
-        part_to_replace = self.save_path[:separator_index]
-        # Variable to replace the extracted part
-        replacement_variable = SAVE
-        # Replacing the extracted part with the variable
-        new_path = self.save_path.replace(part_to_replace, replacement_variable)
-        self.save_path=new_path
-        print("save_path",self.save_path)
+        # 如果路径是一个文件的路径，分离出目录部分
+        directory = os.path.dirname(self.save_ymlpath)
+
+        try:
+            if not os.path.exists(directory):
+
+                os.makedirs(path,exist_ok=True)
+                #创建空的ymal
+
+                print(f"Directory created: {directory}")
+            else:
+                print(f"Directory already exists: {directory}")
+        except Exception as e:
+            print(f"Error creating directory: {e}")
+
+
 
     def excel2yaml(self,exhit='LossRecord'):
         # 读取 Excel 文件中的所有 sheets
-        xls = pd.ExcelFile(self.ex_path)
+        xls = pd.ExcelFile(self.excel_path)
         # Get all sheet names and exclude 'LossRecord'
         sheet_names = [sheet_name for sheet_name in xls.sheet_names if sheet_name != exhit]
 
@@ -35,7 +36,7 @@ class Excel2yaml():
         sheets_data = {}
         for sheet in sheet_names:
             if sheet != exhit:
-                df = pd.read_excel(self.ex_path, sheet_name=sheet)
+                df = pd.read_excel(self.excel_path, sheet_name=sheet)
 
                 # 处理空值：可以选择删除含空值的行，或填充默认值
                 df = df.dropna()  # 删除含空值的行
@@ -51,10 +52,9 @@ class Excel2yaml():
 
 
         # 将 YAML 数据保存到文件
-        with open(self.save_path, 'w', encoding='utf-8') as file:
+        with open(self.save_ymlpath, 'w', encoding='utf-8') as file:
             file.write(yaml_data)
 
 
 if __name__=="__main__":
-    file_path='../Expr1d/Expr_1.xlsx'
-    Excel2yaml(file_path).excel2yaml()
+    pass

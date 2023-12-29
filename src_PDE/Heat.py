@@ -28,48 +28,92 @@ class PDE_HeatData(PDE_base):
         self.a = 0.4
         self.L = 1
         self.n = 1
+
     def torch_u(self, x, t):
         # 确保 x 和 t 是 torch.Tensor 类型
         out= torch.exp(-(self.n ** 2 * np.pi ** 2 * self.a * t) / (self.L ** 2)) * torch.sin(
             self.n * np.pi * x / self.L)
         out=out.unsqueeze(1)
         return out
-
-    def pde(self, net,data):
-        # 确保 data 的相关列设置了 requires_grad=True  对于data：0是x，t是1
+    def pde(self,net,data):
+        dy_t = dde.grad.jacobian(y, x, i=0, j=1)
+        dy_xx = dde.grad.hessian(y, x, i=0, j=0)
+        return dy_t - a * dy_xx
+    def pde_loss(self,net,data):
+        #data:[batch,2]
+        # 确保 data 的相关列设置了 requires_grad=True  对于data：第0维度是x，t是1维度
         u=net(data)  # 计算网络输出
         grad_outputs = torch.ones_like(u)  # 创建一个与u形状相同且元素为1的张量
-        print(u.shape)
-        #u必须为标量
-        du_ddata=grad(u,data,grad_outputs, create_graph=True)[0]
-        print(du_ddata.shape)
-        # 计算二阶导数
 
+        # 计算一阶导数
+        du_data=grad(u,data,grad_outputs,create_graph=True)[0]
+        du_dt=du_data[:,1]
+        du_dx=du_data[:,0].unsqueeze(1)
+        # 计算二阶导数
+        ddu_ddata=grad(du_dx,data,grad_outputs, create_graph=True)[0]
+        ddu_ddx=ddu_ddata[:,0]
 
         # 计算 PDE 残差
         pde_loss =  du_dt - self.a * ddu_ddx
-        pde_loss=pde_loss.unsqueeze(1)
-        print(pde_loss.shape)
+        #mse
+        pde_loss=torch.mean(torch.square(pde_loss))
         return pde_loss
 
-    def Get_Data(self)->dde.data.TimePDE:
+    def bc_loss(self,net,data):
+        #data:[batch,2]
+        # self.data.train_x_all=None
+        # self.data.train_x_bc=None
+        # self.data.train_x = None
+        # self.data.train_x,_,_=self.data.train_next_batch()
+        # self.data.train_x_all=self.data.train_points()
+        inputs=torch.from_numpy(data).float()
+        #targets=self.torch_u(x=inputs[:,0],t=inputs[:,1])  # 创建一个与u形状相同且元素为1的张量(,1)
+        outputs=net(inputs) # 计算网络输出
+
+        #标记bc序列
+        bcs_start = np.cumsum([0] + self.data.num_bcs)
+        bcs_start = list(map(int, bcs_start))
+        losses= []
+        for i, bc in enumerate(self.data.bcs): #ic and bc
+            beg, end = bcs_start[i], bcs_start[i + 1]
+            # The same BC points are used for training and testing.train_x有序
+            error = bc.error(inputs,inputs,outputs, beg, end)
+            #求mse
+            error_scalar = torch.mean(torch.square(error))
+            losses.append(error_scalar)
+        # 将losses列表转换为Tensor
+        losses_tensor = torch.stack(losses)
+        bc_mse = torch.mean(losses_tensor)
+        print("bcmse",bc_mse)
+
+        return bc_mse
+
+    def data_loss(self,net,data):
+        #data:[batch,2]
+        u = net()  # 计算网络输出
+        # 计算 MSE 损失
+        data_loss = nn.mse(u,self.torch_u())
+        return data_loss
+
+    def Get_Data(self)->dde.data.TimePDE: #u(x,t)
         geom = dde.geometry.Interval(0, self.L)
-        timedomain = dde.geometry.TimeDomain(0, 1)
+        timedomain = dde.geometry.TimeDomain(0, 2)
         geomtime = dde.geometry.GeometryXTime(geom, timedomain)
         bc = dde.icbc.DirichletBC(geomtime, lambda x: 0, lambda _, on_boundary: on_boundary)
         ic = dde.icbc.IC(
             geomtime,
-            lambda x: np.sin(n * np.pi * x[:, 0:1] / L),
+            lambda x: np.sin(self.n * np.pi * x[:, 0:1] / self.L),
             lambda _, on_initial: on_initial,
         )
         self.data = dde.data.TimePDE(
             geomtime,
             self.pde,
             [bc, ic],
-            num_domain=2540,
-            num_boundary=80,
-            num_initial=160,
-            num_test=2540,
+            num_domain=1,#sqrt(3600)=60
+            num_boundary=1,
+            num_initial=1,
+            num_test=1,
+            train_distribution="pseudo",
         )
 
         return self.data
@@ -102,6 +146,7 @@ class PDE_HeatData(PDE_base):
         for i in range(x_dim):
             for j in range(t_dim):
                 usol[i][j] = self.heat_eq_exact_solution(x[i], t[j])
+
         return usol
 
     def plot(self):
@@ -160,8 +205,9 @@ if __name__ == "__main__":
     heat=PDE_HeatData()
     data=heat.Get_Data()
     if (type(data)==dde.data.TimePDE):
-        print("ok")
-    print(type(data))
+        print(vars(data))
+    data.train_points()
+
 
 
 

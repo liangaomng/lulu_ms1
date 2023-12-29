@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from .excel2yaml import Excel2yaml
 from .Plot import Plot_Adaptive
 from .Analyzer import Analyzer4scale
+import deepxde as dde
 class Expr():
     def __init__(self):
         self.model=None
@@ -24,7 +25,7 @@ class Expr():
         pass
 
     @abstractmethod
-    def Prepare_model_Dataloader(self,args):
+    def Prepare_model(self,args):
         pass
     @abstractmethod
     def Valid(self,**kwargs):
@@ -100,51 +101,97 @@ class Expr_Agent(Expr):
     def __init__(self,pde_task=False,**kwargs):
         super().__init__()
 
+
         xls2_dict =Return_expr_dict.sheet2dict(kwargs["Read_set_path"])
         self.args = self._read_arg_xlsx(xls2_dict,pde_task=pde_task) # 读取参数
-        self.args.PDE = pde_task  # 确定方程
 
-        if pde_task==True:
-            self.solver = kwargs["solver"]
-            if type(self.solver.data)==deepxde.data.PDE:
-                print("deep-xde")
+        Excel2yaml(path=self.args.Save_Path,
+                   excel=kwargs["Read_set_path"]).excel2yaml()  # convert 2yaml
+        self.args.PDE = pde_task   #deepxde
 
         self.device= torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.Save_Path = kwargs["Loss_Save_Path"] #save pathlike  “expr1/expr_1.xlsx‘
         self.model = None
         self._Random(seed=self.args.seed)
         self._Check()
-        self.Prepare_model_Dataloader()
+        if self.args.PDE == "deepxde":
+            print("deepxde_model") #不用准备dataloader
+            self.model = self.Prepare_model()
+        else:
+            self.model = self.Prepare_model()
+
         self.plot = Plot_Adaptive() # 画图
+        self.solver=kwargs["solver"]
 
-        Excel2yaml(kwargs["Read_set_path"],self.args.Save_Path).excel2yaml() #convert 2yaml
 
+        #加速
         if kwargs["compile_mode"]==True:
             self.model=torch.compile(self.model,mode="max-autotune")
 
     def _read_arg_xlsx(self,xls2_object:dict,**kwargs)->Multi_scale2_Args:
-
+        #共同参数
         args=Multi_scale2_Args(xls2_object["SET"].Scale_Coeff)
         args.model=xls2_object["SET"].Model[0]
         args.lr=xls2_object["SET"].lr[0]
         args.seed=int(xls2_object["SET"].SEED[0])
         args.epoch=int(xls2_object["SET"].Epoch[0])
-
-        if kwargs["pde_task"] == False:
-            args.Train_Dataset=xls2_object["SET"].Train_Dataset[0]
-        args.Valid_Dataset=xls2_object["SET"].Valid_Dataset[0]
-        args.Test_Dataset=xls2_object["SET"].Test_Dataset[0]
+        args.fig_record_interve = int(xls2_object["SET"].Fig_Record_Interve[0])
         args.Save_Path=xls2_object["SET"].Save_Path[0]
         args.batch_size=int(xls2_object["SET"].Batch_size[0])
         args.Con_record=xls2_object["SET"].Con_record #list
         args.Loss_Record_Path = args.Save_Path + "/loss.npy"
-        args.fig_record_interve=int(xls2_object["SET"].Fig_Record_Interve[0])
-        if kwargs["pde_task"]==True:
+        #不一样的
+        if kwargs["pde_task"] == False:#拟合任务
+            args.Train_Dataset=xls2_object["SET"].Train_Dataset[0]
+            args.Valid_Dataset=xls2_object["SET"].Valid_Dataset[0]
+            args.Test_Dataset=xls2_object["SET"].Test_Dataset[0]
+
+            self._valid_dataset = torch.load(self.args.Valid_Dataset)
+            self._test_dataset = torch.load(self.args.Test_Dataset)
+            self._train_dataset = torch.load(self.args.Train_Dataset)
+
+            self._train_loader = DataLoader(dataset=self._train_dataset,
+                                            batch_size=self.args.batch_size,
+                                            shuffle=True)
+            self._valid_loader = DataLoader(dataset=self._valid_dataset,
+                                            batch_size=self.args.batch_size,
+                                            shuffle=True)
+            self._test_loader = DataLoader(dataset=self._test_dataset,
+                                           batch_size=self.args.batch_size,
+                                           shuffle=True)
+
+        if kwargs["pde_task"] =="selfpde":
+            args.Valid_Dataset = xls2_object["SET"].Valid_Dataset[0]
+            args.Test_Dataset = xls2_object["SET"].Test_Dataset[0]
             args.penalty=xls2_object["SET"].Penalty[0]
             args.Boundary_samples=int(xls2_object["SET"].Sum_Samples[0]-
                                       xls2_object["SET"].Domain_Numbers[0])
             args.All_samples=int(xls2_object["SET"].Sum_Samples[0])
+            self._valid_dataset = torch.load(self.args.Valid_Dataset)
+            self._train_dataset = None
+            self._train_loader = None
+            self._valid_loader = DataLoader(dataset=self._valid_dataset,
+                                            batch_size=self.args.batch_size,
+                                            shuffle=True)
+            self._test_loader = DataLoader(dataset=self._test_dataset,
+                                           batch_size=self.args.batch_size,
+                                           shuffle=True)
 
+        if kwargs["pde_task"] =="deepxde":
+            self._train_dataset = None
+            self._train_loader = None
+            self._valid_dataset = None
+            self._valid_loader = None
+            self._test_dataset=None
+            self._test_loader = None
+
+        #loss
+        if kwargs["pde_task"]=="deepxde" or kwargs["pde_task"]=="selfpde":
+            args.penalty_boun=xls2_object["SET"].Penalty_boundary[0]
+            args.penalty_pde=xls2_object["SET"].Penalty_pde[0]
+            args.penalty_mse=xls2_object["SET"].Penalty_mse[0]
+            args.Boundary_samples=int(xls2_object["SET"].Sum_Samples[0]-
+                                      xls2_object["SET"].Domain_Numbers[0])
+            args.All_samples=int(xls2_object["SET"].Sum_Samples[0])
         #  收集子网络的信息
         for i in range(int(args.subnets_number)):
             sub_key="Subnet"+str(i+1)
@@ -153,13 +200,15 @@ class Expr_Agent(Expr):
             args.Ini_Set_list.append(xls2_object[sub_key].Ini_Set)
             args.Residual_Set_list.append(xls2_object[sub_key].Residual)
 
+
+
         return args
     def _Random(self,seed):
         torch.manual_seed(seed)
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
-    def Prepare_model_Dataloader(self):
+    def Prepare_model(self):
 
         if self.args.model == "mscalenn2":
             scale_omegas_coeff = self.args.Scale_Coeff #[1,2,3]
@@ -178,8 +227,6 @@ class Expr_Agent(Expr):
                 residual= residual_en[0],
                 scale_number=scale_omegas_coeff
             )
-            self.model =Muti_scaleSiren()
-
         if self.args.model == "fnn":
             layer_set = self.args.Layer_Set_list#[1, 10, 10, 10, 1]
             residual_en = self.args.Residual_Set_list
@@ -192,25 +239,7 @@ class Expr_Agent(Expr):
                 activation_set= np.array(activation_set)
             )
 
-        self._valid_dataset = torch.load(self.args.Valid_Dataset)
-        self._test_dataset = torch.load(self.args.Test_Dataset)
-
-        self._valid_loader = DataLoader(dataset=self._valid_dataset,
-                                        batch_size=self.args.batch_size,
-                                        shuffle=True)
-        self._test_loader = DataLoader(dataset=self._test_dataset,
-                                       batch_size=self.args.batch_size,
-                                       shuffle=True)
-
-        if self.args.PDE == False:
-            self._train_dataset = torch.load(self.args.Train_Dataset)
-            self._train_loader = DataLoader(dataset=self._train_dataset,
-                                            batch_size=self.args.batch_size,
-                                            shuffle=True)
-
-        else:
-            self._train_dataset = None
-            self._train_loader = None
+        return self.model
 
     def _Check(self):
         # 检查读取路径
@@ -219,9 +248,8 @@ class Expr_Agent(Expr):
                 raise FileNotFoundError("Train_Dataset not found")
 
         # 检查保存路径, 如果没有就创建一个
-        if not os.path.exists(self.Save_Path):
-            os.makedirs(self.Save_Path)
-        self.loss_record_sheet = "LossRecord"  # 指定工作表名称
+        if not os.path.exists(self.args.Save_Path):
+            os.makedirs(self.args.Save_Path)
 
     def _update_loss_record(self, epoch,train_loss):
 
@@ -381,7 +409,7 @@ class Expr_Agent(Expr):
 
         self.model = self.model.to(self.device)
         self.model.train()
-        print(self.model)
+
         optimizer = torch.optim.Adam(self.model.parameters(),
                                      lr=self.args.lr)
         criterion = nn.MSELoss()
@@ -402,7 +430,7 @@ class Expr_Agent(Expr):
 
             assert boundary_pred.shape[-1] == self.args.Boundary_samples
             #boundary loss
-            b_loss = self.args.penalty * boundary_loss(boundary_pred, boundary_label)
+            b_loss = self.args.penalty_boun * boundary_loss(boundary_pred, boundary_label)
             #domian loss
             loss1=criterion(labels[:,:start_b_index,0], outputs[:,:start_b_index,0])
             loss = loss1+b_loss
@@ -418,11 +446,48 @@ class Expr_Agent(Expr):
 
             self._update_loss_record(epoch,
                                      train_loss=aver_loss)
+    def Train_XDE(self):
+
+        self.model = self.model.to(self.device)
+        self.model.train()
+        optimizer = torch.optim.Adam(self.model.parameters(),1e-3)
+        for epoch in range(2):
+            # deepxde重新生成边界条件点-every epoch
+            self.solver.data.train_x = None
+            self.solver.data.train_x_bc = None
+            self.solver.data.train_x, _, _ = self.solver.data.train_next_batch()
+            train_data=torch.from_numpy(self.solver.data.train_x).float()
+            train_data.requires_grad=True
+            #loss
+            train_data=self.solver.data.train_x
+            pde_loss=self.solver.pde_loss(net=self.model,data=train_data)
+            bc_loss=self.solver.bc_loss(net=self.model,data=train_data)
+            data_loss=self.solver.data_loss(net=self.model,data=train_data)
+            loss = bc_loss + pde_loss + data_loss
+            loss.backward()
+            optimizer.step()
+            print("epoch:{},loss:{:.6f}".format(epoch,loss.item()),flush=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def Do_Expr(self):
 
-        if self.args.PDE == True:
+        if self.args.PDE == "self_PDE":
             self.Train_PDE()
+        elif self.args.PDE == "deepxde":
+            self.Train_XDE()
         else:
             self.Train()
         print("we have done the expr")

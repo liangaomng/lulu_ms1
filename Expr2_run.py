@@ -27,10 +27,9 @@ if __name__=="__main__":
 
     # expr
     expr = Expr_Agent(
-                      pde_task=True,
+                      pde_task="selfpde",
                       solver=poisson,
                       Read_set_path=args.expr_set_path,
-                      Loss_Save_Path=read_set_path,
                       compile_mode=args.compile_mode,
                       record_interve=100)
 
