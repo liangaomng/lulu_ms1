@@ -22,10 +22,9 @@ class  PDE_base():
         pass
     def train(self,net=None):
         pass
-class PDE_KDVData(PDE_base):
+class PDE_HelmholtzData(PDE_base):
     def __init__(self):
-        self.k0 = 2*np.pi *1000
-    
+        self.k0 = 2*np.pi 
         self.data_mse=nn.MSELoss()
 
     def torch_u(self, x, y):
@@ -107,8 +106,6 @@ class PDE_KDVData(PDE_base):
     def Get_Data(self)->dde.data.PDE: #u(x,t)
         self.geom = dde.geometry.Rectangle([0, 0], [0.5, 0.5])
         
-
-    
         bc = dde.icbc.DirichletBC(self.geom, lambda x: 0, self.boundary)
         self.data = dde.data.PDE(
             self.geom,

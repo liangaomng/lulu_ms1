@@ -163,7 +163,7 @@ class Plot_Adaptive:
                 data=solver.data.test_x
                 
                 #x轴实际是t【:,1】
-                self.axes[2].scatter(data[:,1],data[:,0],c=np.abs(U_pred-U_true),cmap="rainbow")
+                self.axes[2].scatter(data[:,1],data[:,0],c=np.abs(U_pred-U_true),cmap="rainbow",s=1)
                 # 隐藏 x 和 y 轴的刻度和标签
                 self.axes[2].set_xticks([])
                 self.axes[2].set_yticks([])

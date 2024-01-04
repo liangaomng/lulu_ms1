@@ -196,9 +196,9 @@ class Expr_Agent(Expr):
             args.Boundary_samples=int(xls2_object["SET"].Sum_Samples[0]-
                                         xls2_object["SET"].Domain_Numbers[0])
             args.All_samples=int(xls2_object["SET"].Sum_Samples[0])
-        #  收集子网络的信息
+        #  收集子网络的信息,这里我们假设子网络都一样
         for i in range(int(args.subnets_number)):
-            sub_key="Subnet"+str(i+1)
+            sub_key="Subnet"
             args.Act_Set_list.append(xls2_object[sub_key].Act_Set)
             args.Layer_Set_list.append(xls2_object[sub_key].Layer_Set)
             args.Ini_Set_list.append(xls2_object[sub_key].Ini_Set)
@@ -404,7 +404,7 @@ class Expr_Agent(Expr):
                                         solver=self.solver,
                                         model=self.model,
                                         contribution_record_path=self.args.Con_Record_Path)
-            plt.show()
+
         # 保存整个图表
         fig.savefig('{}/combined_loss_{}.png'.format(self.args.Save_Path, epoch),
                     bbox_inches='tight', format='png')

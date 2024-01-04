@@ -11,11 +11,12 @@
 # conda init bash
 # conda activate base
 export DDE_BACKEND=pytorch
-python Expr3_run.py --expr_set_path "EXPRS/Heat/Expr2d/Expr_1.xlsx"
-python Expr2_run.py --expr_set_path "Expr2d/Expr_2.xlsx"
-python Expr2_run.py --expr_set_path "Expr2d/Expr_3.xlsx"
-python Expr2_run.py --expr_set_path "Expr2d/Expr_4.xlsx"
-python Expr2_run.py --expr_set_path "Expr2d/Expr_5.xlsx"
-python Expr2_run.py --expr_set_path "Expr2d/Expr_6.xlsx"
-python Expr2_run.py --expr_set_path "Expr2d/Expr_7.xlsx"
+export pde_task=Helmholtz
+python Expr1_run.py --expr_set_path "EXPRS/$pde_task/Expr2d/Expr_1.xlsx" --pde_name "$pde_task"
+# python Expr2_run.py --expr_set_path "Expr2d/Expr_2.xlsx"
+# python Expr2_run.py --expr_set_path "Expr2d/Expr_3.xlsx"
+# python Expr2_run.py --expr_set_path "Expr2d/Expr_4.xlsx"
+# python Expr2_run.py --expr_set_path "Expr2d/Expr_5.xlsx"
+# python Expr2_run.py --expr_set_path "Expr2d/Expr_6.xlsx"
+# python Expr2_run.py --expr_set_path "Expr2d/Expr_7.xlsx"
 
