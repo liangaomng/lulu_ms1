@@ -25,15 +25,16 @@ class Analyzer4scale(Analyzer):
             self.input_tensor=torch.tensor([[1,1]])
 
     def _analyze_scales(self,
-                       baseline=-1,
-                       n_steps=1000,
-                       target=0)->list:
+                        baseline=-1,
+                        n_steps=1000,
+                        target=0)->list:
         scales_contribution = []
         input_tensor=self.input_tensor
         device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         input_tensor=input_tensor.float().to(device)
         for i, scale in enumerate(self.model.Multi_scale):
             layer_conductance = LayerConductance(self.model, scale)
+            #target表示输出为层为第一个的神经元
             cond = layer_conductance.attribute(input_tensor, baselines=baseline, n_steps=n_steps, target=target)
             scales_contribution.append(cond.item())
         return scales_contribution
@@ -42,7 +43,7 @@ class Analyzer4scale(Analyzer):
         self.contributions=self._analyze_scales()
         # 归一化 scale_coeffs 以便用于颜色映射
         norm = Normalize(vmin=min(self.scale_coeffs),
-                         vmax=max(self.scale_coeffs))
+                            vmax=max(self.scale_coeffs))
         normed_coeffs = norm(self.scale_coeffs)
         if ax is None:
             raise ValueError("ax must be specified")
@@ -55,7 +56,7 @@ class Analyzer4scale(Analyzer):
             cmap = plt.cm.Purples
         for i, (contrib, coeff_norm) in enumerate(zip(self.contributions, normed_coeffs)):
             ax.bar(i, contrib, color=cmap(coeff_norm),
-                   label=f'Scale {i}: Coeff {self.scale_coeffs[i]}')
+                    label=f'Scale {i}: Coeff {self.scale_coeffs[i]}')
             ax.text(i, contrib, f'{self.scale_coeffs[i]}',
                     ha='center', va='bottom',fontsize=7)
 

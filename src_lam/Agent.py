@@ -9,9 +9,10 @@ from torch.utils.data import DataLoader
 import os
 import matplotlib.pyplot as plt
 from .excel2yaml import Excel2yaml
-from .Plot import Plot_Adaptive
 from .Analyzer import Analyzer4scale
-import deepxde as dde
+from .Plot import Plot_Adaptive
+
+#DDE_BACKEND=pytorch python Expr3_run.py  
 class Expr():
     def __init__(self):
         self.model=None
@@ -56,6 +57,8 @@ class Base_Args():
         self._note=None
         self.Con_record=None
         self.Loss_Record_Path = None
+        self.Con_Record_Path=None
+        
         self.PDE=None #task
         self.fig_record_interve=None
 
@@ -139,6 +142,7 @@ class Expr_Agent(Expr):
         args.batch_size=int(xls2_object["SET"].Batch_size[0])
         args.Con_record=xls2_object["SET"].Con_record #list
         args.Loss_Record_Path = args.Save_Path + "/loss.npy"
+        args.Con_Record_Path = args.Save_Path + "/contribution.npy"
         #不一样的
         if kwargs["pde_task"] == False:#拟合任务
             args.Train_Dataset=xls2_object["SET"].Train_Dataset[0]
@@ -173,8 +177,8 @@ class Expr_Agent(Expr):
                                             batch_size=self.args.batch_size,
                                             shuffle=True)
             self._test_loader = DataLoader(dataset=self._test_dataset,
-                                           batch_size=self.args.batch_size,
-                                           shuffle=True)
+                                            batch_size=self.args.batch_size,
+                                            shuffle=True)
 
         if kwargs["pde_task"] =="deepxde":
             self._train_dataset = None
@@ -190,7 +194,7 @@ class Expr_Agent(Expr):
             args.penalty_pde=xls2_object["SET"].Penalty_pde[0]
             args.penalty_mse=xls2_object["SET"].Penalty_mse[0]
             args.Boundary_samples=int(xls2_object["SET"].Sum_Samples[0]-
-                                      xls2_object["SET"].Domain_Numbers[0])
+                                        xls2_object["SET"].Domain_Numbers[0])
             args.All_samples=int(xls2_object["SET"].Sum_Samples[0])
         #  收集子网络的信息
         for i in range(int(args.subnets_number)):
@@ -251,14 +255,25 @@ class Expr_Agent(Expr):
         if not os.path.exists(self.args.Save_Path):
             os.makedirs(self.args.Save_Path)
 
-    def _update_loss_record(self, epoch,train_loss):
+    def _update_loss_record(self, epoch,train_loss,type=None,**kwargs):
 
         # 画loss的值
         if epoch % self.args.fig_record_interve == 0:
-            valid_loss=self._Valid(epoch=epoch,num_epochs=self.args.epoch)
-            test_loss =self._Test4Save(epoch=epoch)
-            # # 创建一个新记录的DataFrame
-            record = np.array([[epoch, train_loss, valid_loss, test_loss]])
+            if type!="deepxde":
+                valid_loss=self._Valid(epoch=epoch,num_epochs=self.args.epoch)
+                test_loss =self._Test4Save(epoch=epoch)
+                record = np.array([[epoch, train_loss, valid_loss, test_loss]])
+            #deepxde 在外面算test loss包括pde loss/data loss/ bc loss
+            elif type=="deepxde":
+                pde_loss=kwargs["pde_loss"]
+                bc_loss=kwargs["bc_loss"]
+                data_loss=kwargs["data_loss"]
+                train_loss=train_loss.detach().cpu().numpy()
+                test_loss=kwargs["test_loss"]
+                test_data=kwargs["test_data"]
+                
+                record = np.array([[epoch, train_loss,test_loss,pde_loss,bc_loss,data_loss,]])
+            
             # 检查文件是否存在
             if not os.path.isfile(self.args.Loss_Record_Path):
                 # 如果文件不存在，初始化一个空数组并保存
@@ -274,7 +289,7 @@ class Expr_Agent(Expr):
                 np.save(self.args.Loss_Record_Path, updated_data)
 
             self._CheckPoint(epoch=epoch)
-            self._save4plot(epoch, test_loss)
+            self._save4plot(epoch, test_loss,test_data=test_data,type="deepxde")
 
     def _Valid(self,**kwargs):
 
@@ -339,15 +354,21 @@ class Expr_Agent(Expr):
 
         print(f'Test Loss: {avg_test_loss:.6f}')
         return avg_test_loss
-    def _save4plot(self,epoch,avg_test_loss):
+    def _save4plot(self,epoch,avg_test_loss,**kwargs):
         # 创建两个子图，上下布局
         avg_test_loss= avg_test_loss
-        # 加载测试数据集
-        test_data = torch.load(self.args.Test_Dataset)
+        type= kwargs["type"]
 
-        # 将TensorDataset转换为numpy数组
-        x_test = test_data.tensors[0].numpy()
-        y_true = test_data.tensors[1].numpy()
+        if type != "deepxde":
+            # 加载测试数据集
+            test_data = torch.load(self.args.Test_Dataset)
+
+
+        if type == "deepxde":
+            test_data = kwargs["test_data"] 
+            # 将TensorDataset转换为numpy数组
+            x_test = test_data.numpy() #[..,2]
+
 
 
         # 读取损失记录
@@ -357,36 +378,33 @@ class Expr_Agent(Expr):
         pred = self.model(torch.from_numpy(x_test).float().to(self.device)).detach().cpu().numpy()
         #print("test",x_test.shape) #[10,5000,2]
 
-        if x_test.shape[1] == 1: #[500,1]
+        if x_test.shape[-1] == 1: #[500,1]
             # analyzer
             analyzer = Analyzer4scale(model=self.model, d=1,
-                                      scale_coeffs=self.args.Scale_Coeff)
+                                    scale_coeffs=self.args.Scale_Coeff)
             fig,axes=self.plot.plot_1d(nrow=3,ncol=3,
-                                  loss_record=loss_record_npy,
-                                  analyzer=analyzer,
-                                  x_test=x_test,
-                                  y_true=y_true,
-                                  pred=pred,
-                                  epoch=epoch,
-                                  avg_test_loss=avg_test_loss,
-                                  contribution_record=self.args.Con_record,)
+                                loss_record=loss_record_npy,
+                                analyzer=analyzer,
+                                x_test=x_test,
+                                y_true=y_true,
+                                pred=pred,
+                                epoch=epoch,
+                                avg_test_loss=avg_test_loss,
+                                contribution_record=self.args.Con_record,)
 
-        elif x_test.shape[2] == 2: #[10,5000,2]
+        elif x_test.shape[-1] == 2: #[5000,2]
             # analyzer
-            analyzer = Analyzer4scale(
-                                      model=self.model,
-                                      d=2,
-                                      scale_coeffs=self.args.Scale_Coeff)
-            fig, axes = self.plot.plot_2d(nrow=3,
-                                          ncol=3,
-                                          loss_record=loss_record_npy,
-                                          analyzer=analyzer,
-                                          pred=pred,
-                                          epoch=epoch,
-                                          avg_test_loss=avg_test_loss,
-                                          contribution_record=self.args.Con_record,
-                                          solver=self.solver,
-                                          model=self.model)
+            analyzer = Analyzer4scale(model=self.model,d=2,scale_coeffs=self.args.Scale_Coeff)
+            fig, axes = self.plot.plot_2d(nrow=4,ncol=3,loss_record=loss_record_npy,
+                                        analyzer=analyzer,
+                                        pred=pred,
+                                        epoch=epoch,
+                                        avg_test_loss=avg_test_loss,
+                                        contribution_record=self.args.Con_record,
+                                        solver=self.solver,
+                                        model=self.model,
+                                        contribution_record_path=self.args.Con_Record_Path)
+            plt.show()
         # 保存整个图表
         fig.savefig('{}/combined_loss_{}.png'.format(self.args.Save_Path, epoch),
                     bbox_inches='tight', format='png')
@@ -404,14 +422,15 @@ class Expr_Agent(Expr):
 
             torch.save(self.model.state_dict(), dir_name)
             print(f"save model at epoch {epoch}")
+    
+
 
     def Train_PDE(self):
 
         self.model = self.model.to(self.device)
         self.model.train()
 
-        optimizer = torch.optim.Adam(self.model.parameters(),
-                                     lr=self.args.lr)
+        optimizer = torch.optim.Adam(self.model.parameters(),lr=self.args.lr)
         criterion = nn.MSELoss()
         boundary_loss=nn.MSELoss()
         start_b_index= self.args.All_samples-self.args.Boundary_samples #bondary index
@@ -439,56 +458,65 @@ class Expr_Agent(Expr):
             optimizer.step()
             epoch_loss = loss.item()
 
-
-
             aver_loss=epoch_loss/self.args.batch_size
             print("epoch:{},aver_loss:{:.6f}".format(epoch,aver_loss),flush=True)
 
-            self._update_loss_record(epoch,
-                                     train_loss=aver_loss)
+            self._update_loss_record(epoch, train_loss=aver_loss)
     def Train_XDE(self):
 
         self.model = self.model.to(self.device)
         self.model.train()
-        optimizer = torch.optim.Adam(self.model.parameters(),1e-3)
-        for epoch in range(2):
+        optimizer = torch.optim.Adam(self.model.parameters(),self.args.lr)
+        for epoch in range(self.args.epoch):
             # deepxde重新生成边界条件点-every epoch
-            self.solver.data.train_x = None
-            self.solver.data.train_x_bc = None
-            self.solver.data.train_x, _, _ = self.solver.data.train_next_batch()
-            train_data=torch.from_numpy(self.solver.data.train_x).float()
-            train_data.requires_grad=True
-            #loss
-            train_data=self.solver.data.train_x
-            pde_loss=self.solver.pde_loss(net=self.model,data=train_data)
-            bc_loss=self.solver.bc_loss(net=self.model,data=train_data)
-            data_loss=self.solver.data_loss(net=self.model,data=train_data)
-            loss = bc_loss + pde_loss + data_loss
-            loss.backward()
+            self.solver.data.resample_train_points()
+            pde_data= self.solver.data.train_x_all #pde‘ data
+            train_data= self.solver.data.train_x#pde+bc
+
+            train_data=torch.from_numpy(train_data).float()
+            #inputs
+            pde_data=torch.from_numpy(pde_data).float()
+            pde_data.requires_grad=True
+            #pde loss
+            trian_pde_loss=self.solver.pde_loss(net=self.model,pde_data=pde_data)
+            #bc loss
+            trian_bc_loss=self.solver.bc_loss(net=self.model,data=train_data)
+            #data loss
+            train_data_loss=self.solver.data_loss(net=self.model,data=train_data)
+            train_loss =    trian_bc_loss+\
+                            trian_pde_loss +\
+                            train_data_loss
+            #train
+            optimizer.zero_grad()
+            train_loss.backward()
             optimizer.step()
-            print("epoch:{},loss:{:.6f}".format(epoch,loss.item()),flush=True)
+            
+            #plot
+            if epoch %1== 0:
+                test=self.solver.data.test_x
+                torch_test=torch.from_numpy(test).float()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                data_loss = self.solver.data_loss(net=self.model, data=torch_test)
+                pde_loss=self.solver.pde_loss(net=self.model,pde_data=pde_data)
+                bc_loss=self.solver.bc_loss(net=self.model,data=train_data)
+                #test loss
+                test_loss=bc_loss+pde_loss+data_loss 
+                print(f"epoch={epoch},loss{train_loss:.6f},pde_loss:{trian_pde_loss:.6f},bc{trian_bc_loss:.6f},data_loss:{train_data_loss:.6f},test_loss{test_loss.item()}",flush=True)
+                
+            self._update_loss_record(   epoch, train_loss=train_loss,type="deepxde",
+                                        pde_loss=pde_loss.item(),
+                                        bc_loss=bc_loss.item(),
+                                        data_loss=data_loss.item(),
+                                        test_loss=test_loss.item(),
+                                        test_data=torch_test)
+                
     def Do_Expr(self):
 
         if self.args.PDE == "self_PDE":
             self.Train_PDE()
         elif self.args.PDE == "deepxde":
             self.Train_XDE()
-        else:
+        else:#fitting
             self.Train()
         print("we have done the expr")
 

@@ -66,11 +66,10 @@ class St_act_in_4_subnet_space():
     @classmethod
     def activations_get(cls,act_info:np.ndarray)->list:
 
-
         '''
-           return torch.nn.function,every layer every activation function
-           every subnet should have different activation function
-           5 个子网络，3层，说明是5*3的矩阵，每个元素是一个字符串，代表激活函数的名称
+        return torch.nn.function,every layer every activation function
+        every subnet should have different activation function
+        5 个子网络，3层，说明是5*3的矩阵，每个元素是一个字符串，代表激活函数的名称
         '''
         print(act_info.shape)
         subs,layers=act_info.shape
@@ -110,7 +109,7 @@ class SineLayer(nn.Module):
 # activations constant, but boost gradients to the weight matrix (see supplement Sec. 1.5)
 
     def __init__(self, in_features, out_features, bias=True,
-                 is_first=False, omega_0=30):
+                is_first=False, omega_0=30):
         super().__init__()
         self.omega_0 = omega_0
         self.is_first = is_first
@@ -141,37 +140,36 @@ class SineLayer(nn.Module):
 from collections import OrderedDict
 class Siren(nn.Module):
     def __init__(self, in_features,
-                 hidden_features,
-                 hidden_layers,
-                 out_features,
-                 outermost_linear=False,
-                 first_omega_0=30, hidden_omega_0=30.):
+                hidden_features,
+                hidden_layers,
+                out_features,
+                first_omega_0=30, hidden_omega_0=30.):
         super().__init__()
 
         self.net = []
         self.net.append(SineLayer(in_features, hidden_features,
-                                  is_first=True, omega_0=first_omega_0))
+        is_first=True, omega_0=first_omega_0))
 
         for i in range(hidden_layers):
             self.net.append(SineLayer(hidden_features, hidden_features,
-                                      is_first=False, omega_0=hidden_omega_0))
+        is_first=False, omega_0=hidden_omega_0))
 
         if outermost_linear:
             final_linear = nn.Linear(hidden_features, out_features)
 
             with torch.no_grad():
                 final_linear.weight.uniform_(-np.sqrt(6 / hidden_features) / hidden_omega_0,
-                                             np.sqrt(6 / hidden_features) / hidden_omega_0)
+                                            np.sqrt(6 / hidden_features) / hidden_omega_0)
 
             self.net.append(final_linear)
         else:
-            self.net.append(SineLayer(hidden_features, out_features,
-                                      is_first=False, omega_0=hidden_omega_0))
+            self.net.append(SineLayer(hidden_features, out_features,\
+        is_first=False, omega_0=hidden_omega_0))
 
         self.net = nn.Sequential(*self.net)
 
     def forward(self, coords):
-       # coords = coords.clone().requires_grad_(True)  # allows to take derivative w.r.t. input
+        # coords = coords.clone().requires_grad_(True)  # allows to take derivative w.r.t. input
         output = self.net(coords)
         return output
 

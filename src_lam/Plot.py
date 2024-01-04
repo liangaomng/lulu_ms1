@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
-
+import os
 from .Analyzer import Analyzer4scale
 import numpy as np
 
@@ -37,11 +37,17 @@ class Plot_Adaptive:
         for r in [1]:
             ax = self.fig.add_subplot(gs[r, :])
             self.axes.append(ax)
+        
 
-        # 添加最后一行的子图
+        # 添加倒数第二行的子图
         for c in range(ncol):
-            ax = self.fig.add_subplot(gs[-1, c])
+            ax = self.fig.add_subplot(gs[-2, c])
             self.axes.append(ax)
+        
+        for r in [3]:
+            ax = self.fig.add_subplot(gs[r, :])
+            self.axes.append(ax)
+            
     def plot_1d(self,nrow,ncol,**kwagrs):
         # 绘制一些示例数据
         c_map=["Green","Blue","Purple"]
@@ -85,7 +91,7 @@ class Plot_Adaptive:
                 if epoch >=100:
                     for j,value in enumerate(Record):
                         ax.axvline(x=value, color=c_map[j], linestyle='--')
-                    for loss_type in ['valid_loss']:
+                    for loss_type in ['Test Loss']:
                         #valid loss
                         min_loss = np.min(loss_record_df[:,2])
                         min_epoch = loss_record_df[np.where(loss_record_df[:, 2] == min_loss)][0, 0]
@@ -132,6 +138,7 @@ class Plot_Adaptive:
         if self.fig is None:
             self._create_subplot_grid2(nrow, ncol)
         Record = kwagrs["contribution_record"]
+      
 
         for i, ax in enumerate(self.axes):
 
@@ -140,70 +147,117 @@ class Plot_Adaptive:
                 avg_test_loss = kwagrs["avg_test_loss"]
                 epoch = kwagrs["epoch"]
                 # 在第一个子图上绘制真实值的散点图
-                U_pred=solver.plot_2dfrom_model(ax=self.axes[0],
-                                               model=model,
-                                               title="Pred",
-                                               cmap="bwr")
+                U_pred=solver.plot_exact(ax=self.axes[0],
+                                                title="True",
+                                                cmap="rainbow",
+                                                data=solver.data.test_x)
 
                 # 在第一个子图上绘制真实值的散点图
-                U_true=solver.plot_2dfrom_model(ax=self.axes[1],
-                                               model=None,
-                                               title="True",
-                                               cmap="bwr")
-                self.axes[2].imshow((np.abs(U_pred-U_true)),
-                                    cmap="bwr",vmin=-1,vmax=1,origin="lower")
+                U_true=solver.plot_pred(ax=self.axes[1],
+                                                model=model,
+                                                title="Pred",
+                                                cmap="rainbow",
+                                                data=solver.data.test_x)
+                U_pred=U_pred.reshape(-1,1)
+
+                data=solver.data.test_x
+                
+                #x轴实际是t【:,1】
+                self.axes[2].scatter(data[:,1],data[:,0],c=np.abs(U_pred-U_true),cmap="rainbow")
                 # 隐藏 x 和 y 轴的刻度和标签
                 self.axes[2].set_xticks([])
                 self.axes[2].set_yticks([])
                 # 设置第一个子图的图例、坐标轴标签和标题
-                self.axes[2].set_title("Test_MSE={:.6f}_Epoch{}".format(avg_test_loss, epoch))
+                self.axes[2].set_title("Loss={:.6f}_Epoch{}".format(avg_test_loss, epoch))
 
 
-            # if i == 3:  # 第二张图
-            #     # 在第最后子图上绘制损失曲线
-            #     ax.cla()
-            #     loss_record_df = kwagrs["loss_record"]
-            #     ax.plot(loss_record_df[:,0], loss_record_df[:,1], label="Train Loss", color="blue")
-            #     ax.plot(loss_record_df[:,0], loss_record_df[:,2], label="Valid Loss", color="red")
-            #     ax.plot(loss_record_df[:,0], loss_record_df[:,3], label="Test Loss", color="green")
-            #
-            #     # # 画三条虚线
-            #     if epoch >= 100:
-            #         for j, value in enumerate(Record):
-            #             ax.axvline(x=value, color=c_map[j], linestyle='--')
-            #         for loss_type in ['valid_loss']:
-            #             # valid loss   在序号为1的列
-            #             min_loss = np.min(loss_record_df[:, 2])
-            #             min_epoch = loss_record_df[np.where(loss_record_df[:, 2] == min_loss)][0, 0]
-            #             ax.axhline(y=min_loss, xmax=min_epoch, color='black', linestyle=':', linewidth=4)
-            #             # 在最小损失点做标记
-            #             ax.plot(min_epoch, min_loss, '*',
-            #                     color='black', markersize=18,
-            #                     label=f"valid_{min_loss:.1e}")  # 使用黑色圆点做标记
-            #             # 假设已经计算出min_loss，将其添加到Y轴的刻度标签中
-            #             extra_ticks = ax.get_yticks().tolist() + [min_loss]
-            #             ax.set_yticks(extra_ticks)
-            #             # 设置刻度标签，确保最小损失值的标签使用科学记数法
-            #             ax.axvline(x=min_epoch, ymin=1e-7, ymax=min_loss, linestyle='--', linewidth=4)
-            #     ax.legend(loc="best", fontsize=16)
-            #     # 设置第二个子图的图例、坐标轴标签和标题
-            #     ax.set_yscale('log')  # 将y轴设置为对数尺度
-            #     ax.set_xlabel('Epoch', fontsize=16)
-            #     ax.set_ylabel('Loss', fontsize=16)
-            #     ax.get_xaxis().get_major_formatter().set_useOffset(False)
-            #     ax.tick_params(labelsize=16, width=2, colors='black')
-            #     ax.set_title("Loss_Epoch{}".format(epoch))
-            # if i == 4:  # 第三行图开始画贡献度
-            #     if (epoch == Record[0]):
-            #         analyzer.plot_contributions(ax=self.axes[4], fig=self.fig, cmap=c_map[0])
-            #         print("epoch", epoch)
-            # if i == 5:
-            #     if (epoch == Record[1]):
-            #         analyzer.plot_contributions(ax=self.axes[5], fig=self.fig, cmap=c_map[1])
-            # if i == 6:
-            #     if (epoch == Record[2]):
-            #         # for j in epoch_axv:
-            #         analyzer.plot_contributions(ax=self.axes[6], fig=self.fig, cmap=c_map[2])
+            if i == 3:  # 第二张图
+                # 在第最后子图上绘制损失曲线
+                ax.cla()
+                loss_record_df = kwagrs["loss_record"]
+
+                ax.plot(loss_record_df[:,0], loss_record_df[:,1], label="Train Loss", color="blue")
+                #ax.plot(loss_record_df[:,0], loss_record_df[:,2], label="Valid Loss", color="red")
+                ax.plot(loss_record_df[:,0], loss_record_df[:,2], label="Test Loss", color="green")
+                
+            
+                # # 画三条虚线
+                if epoch >= 1000:
+                    for j, value in enumerate(Record):
+                        ax.axvline(x=value, color=c_map[j], linestyle='--')
+                    for loss_type in ['Test_loss']:
+                        # valid loss   在序号为1的列
+                        min_loss = np.min(loss_record_df[:, 2])
+                        min_epoch = loss_record_df[np.where(loss_record_df[:, 2] == min_loss)][0, 0]
+                        ax.axhline(y=min_loss, xmax=min_epoch, color='black', linestyle=':', linewidth=4)
+                        # 在最小损失点做标记
+                        ax.plot(min_epoch, min_loss, '*',
+                                color='black', markersize=18,
+                                label=f"Test_{min_loss:.1e}")  # 使用黑色圆点做标记
+                        # 假设已经计算出min_loss，将其添加到Y轴的刻度标签中
+                        extra_ticks = ax.get_yticks().tolist() + [min_loss]
+                        ax.set_yticks(extra_ticks)
+                        # 设置刻度标签，确保最小损失值的标签使用科学记数法
+                        ax.axvline(x=min_epoch, ymin=1e-7, ymax=min_loss, linestyle='--', linewidth=4)
+                ax.legend(loc="best", fontsize=16)
+                # 设置第二个子图的图例、坐标轴标签和标题
+                ax.set_yscale('log')  # 将y轴设置为对数尺度
+                ax.set_xlabel('Epoch', fontsize=16)
+                ax.set_ylabel('Loss', fontsize=16)
+                ax.get_xaxis().get_major_formatter().set_useOffset(False)
+                ax.tick_params(labelsize=16, width=2, colors='black')
+                ax.set_title("Loss_Epoch{}".format(epoch))
+            if i == 4:  # 第三行图开始画贡献度
+                #我们这里记录一些贡献度 随着epoch记录 --山脊
+                path=kwagrs["contribution_record_path"]
+                contributions=analyzer._analyze_scales()
+                #Now, to combine them into a single list:
+                combined_data = [epoch] + contributions
+
+                # To create a numpy array from this combined data:
+                structured_array = np.array([combined_data])  # Note the brackets to create a two-dimensional array
+
+                # 检查文件是否存在
+                if not os.path.isfile(path):
+                    # 如果文件不存在，初始化一个空数组并保存
+                    np.save(path, structured_array)
+                else:
+                    # 读取现有文件
+                    existing_data = np.load(path,allow_pickle=True)
+                    
+                    # 过滤掉与当前 epoch 相同的记录
+                    existing_data = existing_data[existing_data[:, 0] != epoch]
+                    # 将新记录追加到现有数据中
+                    updated_data = np.vstack((existing_data, structured_array))
+                    # 保存更新后的数据
+                    np.save(path, updated_data)
+                
+                
+                if (epoch == Record[0]):
+                    analyzer.plot_contributions(ax=self.axes[4], fig=self.fig, cmap=c_map[0])
+                
+            if i == 5:
+                if (epoch == Record[1]):
+                    analyzer.plot_contributions(ax=self.axes[5], fig=self.fig, cmap=c_map[1])
+            if i == 6:
+                if (epoch == Record[2]):
+                    # for j in epoch_axv:
+                    analyzer.plot_contributions(ax=self.axes[6], fig=self.fig, cmap=c_map[2])
+            if i== 7:
+                ax.cla()
+                if(epoch>10):
+                    #读取贡献度
+                    contri_record_df=np.load(path,allow_pickle=True)
+                    scale_number=contri_record_df.shape[1]-1 #减去epoch
+                    for i in range(scale_number):
+                        ax.plot(contri_record_df[:,0],contri_record_df[:,i+1],label=f"scale_{i+1}")
+                    ax.legend(loc="best", fontsize=16)
+                    # 设置第二个子图的图例、坐标轴标签和标题\
+                    ax.set_xlabel('Epoch', fontsize=16)
+                    ax.set_ylabel('Contribution', fontsize=16)
+                    ax.set_title("Contribution_Epoch")
+        
+                
 
         return self.fig, self.axes
 
